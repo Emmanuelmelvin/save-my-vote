@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FiList, FiUsers, FiMail, FiImage, FiEye, FiPlus, FiFileText, FiInfo } from 'react-icons/fi';
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from '@/components/ui/calendar'
@@ -65,17 +65,14 @@ const CreateElection: React.FC = () => {
             </ul>
           </div>
         </div>
-        <Card className="bg-white border border-slate-100 shadow-sm">
-          <CardHeader className="px-6 md:px-8">
+        <Card className="bg-white rounded-xl p-6 md:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center text-teal-600">
                 <FiFileText size={18} />
               </div>
               <h3 className="text-lg font-semibold">Basic Information</h3>
             </div>
-          </CardHeader>
 
-          <CardContent className="px-6 md:px-8">
             <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700">Election title*</label>
@@ -169,7 +166,6 @@ const CreateElection: React.FC = () => {
               <Button className="px-6 py-3 rounded-md shadow-sm">Save & Continue</Button>
             </div>
             </div>
-          </CardContent>
         </Card>
       </div>
     </div>

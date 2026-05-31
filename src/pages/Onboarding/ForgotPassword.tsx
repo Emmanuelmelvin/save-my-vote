@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
+import { Card } from '@/components/ui/card'
 import { HelperLink, OtpInput, PasswordField, PrimaryButton, TextField } from '@/components/AuthControls'
 import { Button } from '@/components/ui/button'
 import useAuthStore from '@/store/auth'
@@ -124,84 +125,88 @@ const ForgotPassword: React.FC = () => {
       <div className="relative">
         <LoadingModal open={loading} message={loadingMessage} />
 
-        {step === 'request' ? (
-          <form
-            className="space-y-5"
-            onSubmit={(event) => {
-              event.preventDefault()
-              sendReset(email)
-              transitionTo('verify', 'Sending verification code...')
-            }}
-          >
-            <TextField id="reset-email" label="Email" type="email" placeholder="Enter your email" value={email} onChange={setEmail} autoComplete="email" />
-            <PrimaryButton type="submit">Send OTP</PrimaryButton>
-          </form>
-        ) : null}
+        <div className="max-w-md">
+          <Card className="bg-white rounded-xl p-6 border border-[#E3E3E3] shadow-sm">
+            {step === 'request' ? (
+              <form
+                className="space-y-5"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  sendReset(email)
+                  transitionTo('verify', 'Sending verification code...')
+                }}
+              >
+                <TextField id="reset-email" label="Email" type="email" placeholder="Enter your email" value={email} onChange={setEmail} autoComplete="email" />
+                <PrimaryButton type="submit">Send OTP</PrimaryButton>
+              </form>
+            ) : null}
 
-        {step === 'verify' ? (
-          <form
-            className="space-y-6"
-            onSubmit={(event) => {
-              event.preventDefault()
-              verifyOTP(code)
-              transitionTo('reset', 'Verifying code...')
-            }}
-          >
-            <div className="space-y-3">
-              <p className="text-[14px] text-[#6b7280]">Enter the 4-digit code below.</p>
-              <OtpInput value={code} onChange={setCode} />
-            </div>
+            {step === 'verify' ? (
+              <form
+                className="space-y-6"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  verifyOTP(code)
+                  transitionTo('reset', 'Verifying code...')
+                }}
+              >
+                <div className="space-y-3">
+                  <p className="text-[14px] text-[#6b7280]">Enter the 4-digit code below.</p>
+                  <OtpInput value={code} onChange={setCode} />
+                </div>
 
-            <div className="space-y-3">
-              <p className="text-[14px] text-[#6b7280]">
-                Didn’t get a verification code?{' '}
-                <Button variant="link" asChild>
-                  <button
-                    type="button"
-                    disabled={countdown > 0}
-                    onClick={() => {
-                      sendReset(email)
-                      transitionTo('verify', 'Resending verification code...')
-                    }}
-                    className="font-medium text-[#3758F9] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
-                  >
-                    Resend Code
-                  </button>
-                </Button>{' '}
-                <span aria-live="polite" className="font-medium text-[#111528]">
-                  0:{countdown.toString().padStart(2, '0')}
-                </span>
-              </p>
-              <PrimaryButton type="submit">Verify Code</PrimaryButton>
-            </div>
-          </form>
-        ) : null}
+                <div className="space-y-3">
+                  <p className="text-[14px] text-[#6b7280]">
+                    Didn’t get a verification code?{' '}
+                    <Button variant="link" asChild>
+                      <button
+                        type="button"
+                        disabled={countdown > 0}
+                        onClick={() => {
+                          sendReset(email)
+                          transitionTo('verify', 'Resending verification code...')
+                        }}
+                        className="font-medium text-[#3758F9] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
+                      >
+                        Resend Code
+                      </button>
+                    </Button>{' '}
+                    <span aria-live="polite" className="font-medium text-[#111528]">
+                      0:{countdown.toString().padStart(2, '0')}
+                    </span>
+                  </p>
+                  <PrimaryButton type="submit">Verify Code</PrimaryButton>
+                </div>
+              </form>
+            ) : null}
 
-        {step === 'reset' ? (
-          <form
-            className="space-y-5"
-            onSubmit={(event) => {
-              event.preventDefault()
-              transitionTo('done', 'Updating password...')
-            }}
-          >
-            <PasswordField id="new-password" label="New password" value={newPassword} onChange={setNewPassword} />
-            <PasswordField id="confirm-password" label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} />
-            <PrimaryButton type="submit">Update Password</PrimaryButton>
-          </form>
-        ) : null}
+            {step === 'reset' ? (
+              <form
+                className="space-y-5"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  transitionTo('done', 'Updating password...')
+                }}
+              >
+                <PasswordField id="new-password" label="New password" value={newPassword} onChange={setNewPassword} />
+                <PasswordField id="confirm-password" label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} />
+                <PrimaryButton type="submit">Update Password</PrimaryButton>
+              </form>
+            ) : null}
 
-        {step === 'done' ? (
-          <div className="space-y-5">
-            <div className="rounded-[16px] border border-[#E3E3E3] bg-white p-5 shadow-sm">
-              <p className="text-[16px] font-medium text-[#111528]">Your password has been updated successfully.</p>
-              <p className="mt-2 text-[14px] text-[#6b7280]">Use your new password the next time you sign in.</p>
-            </div>
-            <PrimaryButton type="button" onClick={() => setLocation('/login')}>
-              Back to Login
-            </PrimaryButton>
-          </div>
-        ) : null}
+            {step === 'done' ? (
+              <div className="space-y-5">
+                <div className="rounded-[16px] border border-[#E3E3E3] bg-white p-5 shadow-sm">
+                  <p className="text-[16px] font-medium text-[#111528]">Your password has been updated successfully.</p>
+                  <p className="mt-2 text-[14px] text-[#6b7280]">Use your new password the next time you sign in.</p>
+                </div>
+                <PrimaryButton type="button" onClick={() => setLocation('/login')}>
+                  Back to Login
+                </PrimaryButton>
+              </div>
+            ) : null}
+          </Card>
+        </div>
       </div>
       <HelperLink href="/login" label="Back to login" align="center" />
     </AuthLayout>

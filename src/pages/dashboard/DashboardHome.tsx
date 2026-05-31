@@ -21,7 +21,7 @@ const DashboardHome: React.FC<{ onCreate?: () => void }> = ({ onCreate }) => {
           <BallotSvg />
           <h3 className="text-lg font-semibold">You don’t have any elections created</h3>
           <p className="text-sm text-slate-400">Start by creating your first election</p>
-          <Button className="mt-4 px-6 py-2 rounded-lg" onClick={onCreate}>Create new Election</Button>
+          <Button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg" onClick={onCreate}>Create new Election</Button>
         </div>
       </section>
     </div>

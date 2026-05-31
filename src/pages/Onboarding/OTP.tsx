@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
+import { Card } from '@/components/ui/card'
 import { Divider, InlineLabel, OtpInput, PrimaryButton } from '@/components/AuthControls'
 import { Button } from '@/components/ui/button'
 import useAuthStore from '@/store/auth'
@@ -26,29 +27,35 @@ const OTP: React.FC = () => {
       sideImageSrc={otpSideImage}
       footer={<div className="text-[14px] text-[#6b7280]">Need a different account? <Link href="/signup" className="font-medium text-[#3758F9]">Create one here</Link></div>}
     >
-      <form
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          verify(code)
-          setLocation('/login')
-        }}
-      >
-        <div className="space-y-3">
-          <InlineLabel>Enter the 4-digit code below</InlineLabel>
-          <OtpInput value={code} onChange={setCode} />
-        </div>
+      <div>
+        <div className="max-w-md">
+          <Card className="bg-white rounded-xl p-6 border border-[#E3E3E3] shadow-sm">
+            <form
+              className="space-y-6"
+              onSubmit={(event) => {
+                event.preventDefault()
+                verify(code)
+                setLocation('/login')
+              }}
+            >
+              <div className="space-y-3">
+                <InlineLabel>Enter the 4-digit code below</InlineLabel>
+                <OtpInput value={code} onChange={setCode} />
+              </div>
 
-        <div className="space-y-3">
-          <p className="text-[14px] text-[#6b7280]">
-            Didn’t get a verification code? <Button variant="link" asChild>
-              <button type="button" className="font-medium text-[#3758F9]">Resend Code</button>
-            </Button>{' '}
-            <span aria-live="polite" className="font-medium text-[#111528]">0:{countdown.toString().padStart(2, '0')}</span>
-          </p>
-          <PrimaryButton type="submit">Verify Code</PrimaryButton>
+              <div className="space-y-3">
+                <p className="text-[14px] text-[#6b7280]">
+                  Didn’t get a verification code? <Button variant="link" asChild>
+                    <button type="button" className="font-medium text-[#3758F9]">Resend Code</button>
+                  </Button>{' '}
+                  <span aria-live="polite" className="font-medium text-[#111528]">0:{countdown.toString().padStart(2, '0')}</span>
+                </p>
+                <PrimaryButton type="submit">Verify Code</PrimaryButton>
+              </div>
+            </form>
+          </Card>
         </div>
-      </form>
+      </div>
       <Divider label="" />
     </AuthLayout>
   )
