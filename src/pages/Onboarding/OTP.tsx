@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
 import { Divider, InlineLabel, OtpInput, PrimaryButton } from '@/components/AuthControls'
+import { Button } from '@/components/ui/button'
 import useAuthStore from '@/store/auth'
 import mock from '@/data/mock'
 import otpSideImage from '@/assets/side.png'
@@ -40,7 +41,9 @@ const OTP: React.FC = () => {
 
         <div className="space-y-3">
           <p className="text-[14px] text-[#6b7280]">
-            Didn’t get a verification code? <button type="button" className="font-medium text-[#3758F9]">Resend Code</button>{' '}
+            Didn’t get a verification code? <Button variant="link" asChild>
+              <button type="button" className="font-medium text-[#3758F9]">Resend Code</button>
+            </Button>{' '}
             <span aria-live="polite" className="font-medium text-[#111528]">0:{countdown.toString().padStart(2, '0')}</span>
           </p>
           <PrimaryButton type="submit">Verify Code</PrimaryButton>

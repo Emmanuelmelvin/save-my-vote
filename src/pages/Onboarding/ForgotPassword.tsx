@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
 import { HelperLink, OtpInput, PasswordField, PrimaryButton, TextField } from '@/components/AuthControls'
+import { Button } from '@/components/ui/button'
 import useAuthStore from '@/store/auth'
 import forgotSideImage from '@/assets/side.png'
 import loadingLogo from '@/assets/image.png'
@@ -154,17 +155,19 @@ const ForgotPassword: React.FC = () => {
             <div className="space-y-3">
               <p className="text-[14px] text-[#6b7280]">
                 Didn’t get a verification code?{' '}
-                <button
-                  type="button"
-                  disabled={countdown > 0}
-                  onClick={() => {
-                    sendReset(email)
-                    transitionTo('verify', 'Resending verification code...')
-                  }}
-                  className="font-medium text-[#3758F9] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
-                >
-                  Resend Code
-                </button>{' '}
+                <Button variant="link" asChild>
+                  <button
+                    type="button"
+                    disabled={countdown > 0}
+                    onClick={() => {
+                      sendReset(email)
+                      transitionTo('verify', 'Resending verification code...')
+                    }}
+                    className="font-medium text-[#3758F9] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
+                  >
+                    Resend Code
+                  </button>
+                </Button>{' '}
                 <span aria-live="polite" className="font-medium text-[#111528]">
                   0:{countdown.toString().padStart(2, '0')}
                 </span>

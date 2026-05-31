@@ -2,23 +2,8 @@ import React, { useState } from 'react'
 import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle } from 'react-icons/fi'
 import logo from '@/assets/image.png'
 import CreateElection from '@/pages/dashboard/CreateElection'
-
-const FilterPill: React.FC<{ children: React.ReactNode; active?: boolean }> = ({ children, active }) => (
-  <button
-    className={`px-3 py-1 rounded-md text-sm font-medium border ${active ? 'bg-blue-600 text-white border-transparent' : 'bg-white text-slate-600 border-slate-200'}`}
-  >
-    {children}
-  </button>
-)
-
-const BallotSvg: React.FC = () => (
-  <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="10" y="30" width="100" height="60" rx="8" fill="#0B61FF"/>
-    <path d="M25 30L95 30" stroke="#ffffff" strokeWidth="2" opacity="0.15"/>
-    <rect x="48" y="14" width="24" height="18" rx="3" fill="#E6F0FF" transform="rotate(20 48 14)"/>
-    <circle cx="44" cy="52" r="3" fill="#ffffff"/>
-  </svg>
-)
+import { Button } from '@/components/ui/button'
+import { FilterPill, BallotSvg } from './dashboard/shared'
 
 const Dashboard: React.FC = () => {
   const [open, setOpen] = useState(false)
@@ -63,11 +48,11 @@ const Dashboard: React.FC = () => {
         {/* Topbar */}
         <header className="flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100">
           <div className="flex items-center gap-4">
-            <button className="md:hidden p-2" onClick={() => setOpen(true)} aria-label="Open menu"><FiMenu size={20} /></button>
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><FiMenu size={20} /></Button>
             <h1 className="text-lg font-medium">{activePage === 'create' ? 'Create Election' : 'Dashboard'}</h1>
           </div>
           <div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md shadow">Create new Election +</button>
+            <Button className="px-4 py-2 rounded-md shadow">Create new Election +</Button>
           </div>
         </header>
 
@@ -78,7 +63,7 @@ const Dashboard: React.FC = () => {
             <aside className="fixed left-0 top-0 h-full w-64 bg-white z-50 p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-6">
                   {activePage !== 'create' && <img src={logo} alt="logo" className="w-24 h-auto" />}
-                  <button onClick={() => setOpen(false)} aria-label="Close menu"><FiX size={20} /></button>
+                  <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close menu"><FiX size={20} /></Button>
                 </div>
               <nav>
                 <ul className="space-y-2">
@@ -123,7 +108,7 @@ const Dashboard: React.FC = () => {
                     <BallotSvg />
                     <h3 className="text-lg font-semibold">You don’t have any elections created</h3>
                     <p className="text-sm text-slate-400">Start by creating your first election</p>
-                    <button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg" onClick={() => setActivePage('create')}>Create new Election</button>
+                    <Button className="mt-4 px-6 py-2 rounded-lg" onClick={() => setActivePage('create')}>Create new Election</Button>
                   </div>
                 </section>
               </>

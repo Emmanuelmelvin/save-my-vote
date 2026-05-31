@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FaEye, FaEyeSlash, FaGoogle, FaMicrosoft, FaLock } from 'react-icons/fa6'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { FiMail } from 'react-icons/fi'
 
 export const TextField: React.FC<{
@@ -15,14 +17,14 @@ export const TextField: React.FC<{
   return (
     <label className="block space-y-2" htmlFor={id}>
       <span className="text-[14px] font-medium text-[#111528]">{label}</span>
-      <input
+      <Input
         id={id}
         type={type}
         autoComplete={autoComplete}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="block w-full rounded-[8px] border border-[#E3E3E3] bg-white px-4 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
+        className="rounded-[8px] border border-[#E3E3E3] bg-white px-4 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
       />
       {error ? <span className="text-sm text-[#d43939]">{error}</span> : null}
     </label>
@@ -45,22 +47,23 @@ export const PasswordField: React.FC<{
         <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#9CA3AF]">
           <FaLock className="h-4 w-4" />
         </span>
-        <input
+        <Input
           id={id}
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="block w-full rounded-[8px] border border-[#E3E3E3] bg-white px-11 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
+          className="rounded-[8px] border border-[#E3E3E3] bg-white px-11 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setShowPassword((current) => !current)}
           className="absolute inset-y-0 right-3 flex items-center rounded-full px-2 text-[#6b7280] transition hover:text-[#111528]"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
           aria-pressed={showPassword}
         >
           {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
-        </button>
+        </Button>
       </div>
       {error ? <span className="text-sm text-[#d43939]">{error}</span> : null}
     </label>
@@ -69,12 +72,9 @@ export const PasswordField: React.FC<{
 
 export const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', children, ...props }) => {
   return (
-    <button
-      {...props}
-      className={`inline-flex w-full items-center justify-center rounded-[8px] bg-[#3758F9] px-6 py-3 text-[16px] font-medium text-white shadow-[0_18px_35px_rgba(55,88,249,0.24)] transition hover:bg-[#003dff] focus:outline-none focus:ring-2 focus:ring-[#3758F9]/25 disabled:cursor-not-allowed disabled:bg-[#9CA3AF] ${className}`}
-    >
+    <Button variant="default" className={`w-full ${className}`} {...props}>
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -86,14 +86,10 @@ export const SocialButton: React.FC<{
   const Icon = icon === 'google' ? FaGoogle : FaMicrosoft
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex w-full items-center justify-center gap-3 rounded-[8px] border border-[#E3E3E3] bg-white px-4 py-3 text-[14px] font-medium text-[#111528] transition hover:border-[#3758F9] hover:text-[#3758F9]"
-    >
+    <Button variant="outline" className="w-full inline-flex items-center justify-center gap-3 rounded-[8px] px-4 py-3 text-[14px] font-medium text-[#111528]" onClick={onClick}>
       <Icon className="h-4 w-4" />
       <span>{label}</span>
-    </button>
+    </Button>
   )
 }
 
@@ -122,11 +118,11 @@ export const RadioGroup: React.FC<{
         ].map((option) => {
           const selected = value === option.key
           return (
-            <button
+            <Button
               key={option.key}
-              type="button"
+              variant={selected ? 'default' : 'outline'}
               onClick={() => onChange(option.key)}
-              className={`rounded-[12px] border px-4 py-4 text-left transition ${selected ? 'border-[#3758F9] bg-[#3758F9]/5' : 'border-[#E3E3E3] bg-white hover:border-[#3758F9]/60'}`}
+              className={`rounded-[12px] px-4 py-4 text-left transition ${selected ? 'border-[#3758F9] bg-[#3758F9]/5' : 'border-[#E3E3E3] bg-white hover:border-[#3758F9]/60'}`}
             >
               <span className="flex items-center gap-3">
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selected ? 'border-[#3758F9]' : 'border-[#CBD5E1]'}`}>
@@ -135,7 +131,7 @@ export const RadioGroup: React.FC<{
                 <span className="font-medium text-[#111528]">{option.title}</span>
               </span>
               <span className="mt-2 block pl-8 text-sm text-[#6b7280]">{option.description}</span>
-            </button>
+            </Button>
           )
         })}
       </div>
