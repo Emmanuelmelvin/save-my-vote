@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 const Voters: React.FC = () => (
-  <Card className="rounded-[28px] border-slate-200 bg-white p-0 shadow-sm">
+  <Card className="border border-slate-100 bg-white p-0 shadow-sm">
     <div className="flex min-h-[330px] flex-col px-6 py-8 sm:px-8 md:min-h-[460px] md:items-center md:justify-center md:px-10 md:py-12">
       <div className="flex w-full max-w-[470px] flex-col gap-7 md:items-center md:text-center">
         <div className="flex items-center gap-3 md:justify-center">
