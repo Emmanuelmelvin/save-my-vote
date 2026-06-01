@@ -16,8 +16,6 @@ const Dashboard: React.FC = () => {
     </li>
   )
 
-  // CreateElection moved to separate tab file
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 md:overflow-hidden">
       {/* Sidebar for large screens (fixed, non-scrollable) */}
@@ -45,24 +43,29 @@ const Dashboard: React.FC = () => {
       </aside>
 
       <div className="min-w-0 flex flex-col md:ml-64 md:h-screen">
-        {/* Topbar */}
-        <header className="flex items-center justify-between px-6 py-5 bg-white border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><FiMenu size={20} /></Button>
-            <h1 className="text-lg font-medium">{activePage === 'create' ? 'Create Election' : 'Dashboard'}</h1>
-          </div>
-          <div>
-            <Button className="px-4 py-2 bg-blue-600 text-white rounded-md shadow">Create new Election +</Button>
-          </div>
+        {/* Mobile topbar */}
+        <header className="flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:hidden">
+          <img src={logo} alt="logo" className="h-8 w-auto" />
+          <h1 className="flex-1 px-4 text-center text-lg font-medium">
+            {activePage === 'create' ? 'Create Election' : 'Dashboard'}
+          </h1>
+          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Open menu">
+            <FiMenu size={20} />
+          </Button>
+        </header>
+
+        {/* Desktop topbar */}
+        <header className="hidden items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:flex">
+          <h1 className="text-lg font-medium">{activePage === 'create' ? 'Create Election' : 'Dashboard'}</h1>
+          <div />
         </header>
 
         {/* Mobile slide-over sidebar */}
         {open && (
           <>
             <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setOpen(false)} />
-            <aside className="fixed left-0 top-0 h-full w-64 bg-white z-50 p-6 shadow-lg">
-                <div className="flex items-center justify-between mb-6">
-                  {activePage !== 'create' && <img src={logo} alt="logo" className="w-24 h-auto" />}
+            <aside className="fixed right-0 top-0 h-full w-64 bg-white z-50 p-6 shadow-lg">
+                <div className="flex items-center justify-end mb-6">
                   <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close menu"><FiX size={20} /></Button>
                 </div>
               <nav>
