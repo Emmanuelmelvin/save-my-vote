@@ -1,10 +1,16 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
 
 export const FilterPill: React.FC<{ children: React.ReactNode; active?: boolean }> = ({ children, active }) => (
-  <Button variant={active ? 'default' : 'outline'} className="px-3 py-1 rounded-md text-sm font-medium">
+  <button
+    type="button"
+    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+      active
+        ? 'bg-[#1050ff] text-white hover:bg-[#0b45e4]'
+        : 'bg-white text-[#374151] border border-slate-200 hover:bg-slate-50'
+    }`}
+  >
     {children}
-  </Button>
+  </button>
 )
 
 export const BallotSvg: React.FC = () => (

@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useLocation } from 'wouter'
+import { useLocation } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
-import { Card } from '@/components/ui/card'
-import { Divider, InlineLabel, OtpInput, PrimaryButton } from '@/components/AuthControls'
-import { Button } from '@/components/ui/button'
+import { OtpInput, PrimaryButton } from '@/components/AuthControls'
 import useAuthStore from '@/store/auth'
 import mock from '@/data/mock'
-import otpSideImage from '@/assets/side.png'
 
 const OTP: React.FC = () => {
   const [, setLocation] = useLocation()
@@ -23,40 +20,41 @@ const OTP: React.FC = () => {
   return (
     <AuthLayout
       title="Verify your Email address"
-      subtitle={`We’ve sent you a 4-digit verification code to ${mock.users[1].email}. Open Gmail to retrieve it.`}
-      sideImageSrc={otpSideImage}
-      footer={<div className="text-[14px] text-[#6b7280]">Need a different account? <Link href="/signup" className="font-medium text-[#3758F9]">Create one here</Link></div>}
+      subtitle={`We’ve sent you a 4-digit verification code to ${mock.users[1].email}`}
+      illustration="signup"
     >
-      <div>
-        <div className="max-w-md">
-          <Card className="bg-white rounded-xl p-6 border border-[#E3E3E3] shadow-sm">
-            <form
-              className="space-y-6"
-              onSubmit={(event) => {
-                event.preventDefault()
-                verify(code)
-                setLocation('/login')
-              }}
-            >
-              <div className="space-y-3">
-                <InlineLabel>Enter the 4-digit code below</InlineLabel>
-                <OtpInput value={code} onChange={setCode} />
-              </div>
+      <div className="w-full max-w-[540px] space-y-10">
+        <a href="https://mail.google.com" target="_blank" rel="noreferrer" className="inline-flex text-[14px] font-medium text-[#1050ff]">
+          Open Gmail
+        </a>
 
-              <div className="space-y-3">
-                <p className="text-[14px] text-[#6b7280]">
-                  Didn’t get a verification code? <Button variant="link" asChild>
-                    <button type="button" className="font-medium text-[#3758F9]">Resend Code</button>
-                  </Button>{' '}
-                  <span aria-live="polite" className="font-medium text-[#111528]">0:{countdown.toString().padStart(2, '0')}</span>
-                </p>
-                <PrimaryButton type="submit">Verify Code</PrimaryButton>
-              </div>
-            </form>
-          </Card>
-        </div>
+        <form
+          className="space-y-8"
+          onSubmit={(event) => {
+            event.preventDefault()
+            verify(code)
+            setLocation('/login')
+          }}
+        >
+          <div className="space-y-4">
+            <label className="text-[15px] font-medium text-[#18203a]">Enter Code</label>
+            <OtpInput value={code} onChange={setCode} />
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-[14px] text-[#374151]">
+              Didn’t get a verification code?{' '}
+              <button type="button" className="font-medium text-[#1050ff]">
+                Resend Code
+              </button>{' '}
+              <span aria-live="polite" className="font-medium text-[#9ca3af]">
+                0:{countdown.toString().padStart(2, '0')}
+              </span>
+            </p>
+            <PrimaryButton type="submit">Verify Code</PrimaryButton>
+          </div>
+        </form>
       </div>
-      <Divider label="" />
     </AuthLayout>
   )
 }

@@ -6,7 +6,7 @@ const DashboardHome: React.FC<{ onCreate?: () => void }> = ({ onCreate }) => {
   return (
     <div>
       <section className="mb-6">
-        <h2 className="text-sm font-semibold text-slate-700 mb-4">All Elections</h2>
+        <h2 className="text-sm bg-blue font-semibold text-slate-700 mb-4">All Elections</h2>
         <div className="flex gap-3">
           <FilterPill active>All</FilterPill>
           <FilterPill>Active</FilterPill>

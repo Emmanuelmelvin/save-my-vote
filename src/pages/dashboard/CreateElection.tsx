@@ -39,11 +39,17 @@ const CreateElection: React.FC = () => {
         <div className="bg-white rounded-md p-4 border border-slate-100">
           <ul className="space-y-3">
             {steps.map((s, i) => (
-              <li key={s.key} className={`flex items-center gap-3 ${i === activeStep ? 'text-blue-600 font-medium' : 'text-slate-700'}`}>
-                <Input type="checkbox" className="w-4 h-4" />
+              <li
+                key={s.key}
+                className={`flex items-center gap-3 cursor-default p-2 rounded-md ${
+                  i === activeStep ? 'bg-[#eef2ff] text-[#0b45e4] font-medium' : 'text-slate-700'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${i === activeStep ? 'bg-[#1050ff] text-white' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className="text-lg">{s.icon}</span>
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">{s.icon}</span>
-                  <span className="ml-2">{s.label}</span>
+                  <span className="ml-1">{s.label}</span>
                 </div>
               </li>
             ))}
@@ -54,15 +60,21 @@ const CreateElection: React.FC = () => {
       <div className="flex-1 min-w-0">
         {/* mobile steps shown at top before the Basic Information card */}
         <div className="md:hidden mb-4">
-          <div className="bg-white rounded-md p-2 border border-slate-100">
-            <ul className="space-y-2">
+          <div className="bg-white rounded-md p-2 border border-slate-100 overflow-x-auto">
+            <div className="flex gap-2">
               {steps.map((s, i) => (
-                <li key={s.key} className={`flex items-center gap-3 px-3 py-2 rounded-md ${i === activeStep ? 'bg-blue-50 text-blue-600' : 'text-slate-700'}`}>
+                <button
+                  key={s.key}
+                  type="button"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md ${
+                    i === activeStep ? 'bg-[#1050ff] text-white' : 'bg-white text-slate-700 border border-slate-100'
+                  }`}
+                >
                   <span className="text-sm">{s.icon}</span>
                   <span className="text-sm">{s.label}</span>
-                </li>
+                </button>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
         <Card className="bg-white rounded-xl p-6 md:p-8 border border-slate-100 shadow-sm">
@@ -163,7 +175,7 @@ const CreateElection: React.FC = () => {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button className="px-6 py-3 rounded-md shadow-sm">Save & Continue</Button>
+              <Button className="px-6 py-3 rounded-md shadow-sm bg-[#1050ff] text-white">Save & Continue</Button>
             </div>
             </div>
         </Card>
