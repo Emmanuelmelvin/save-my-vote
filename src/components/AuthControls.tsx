@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FaEye, FaEyeSlash, FaGoogle, FaMicrosoft, FaLock } from 'react-icons/fa6'
+import { FaEye, FaEyeSlash, FaGoogle, FaMicrosoft } from 'react-icons/fa6'
 import { Button } from '@/components/ui/button'
 import { FiMail } from 'react-icons/fi'
 
@@ -12,10 +12,14 @@ export const TextField: React.FC<{
   onChange: (value: string) => void
   error?: string
   autoComplete?: string
-}> = ({ id, label, type = 'text', placeholder, value, onChange, error, autoComplete }) => {
+  required?: boolean
+}> = ({ id, label, type = 'text', placeholder, value, onChange, error, autoComplete, required = false }) => {
   return (
     <label className="block space-y-2" htmlFor={id}>
-      <span className="text-[14px] font-medium text-[#111528]">{label}</span>
+      <span className="text-[15px] font-medium text-[#18203a]">
+        {label}
+        {required ? <span className="text-[#e11d48]">*</span> : null}
+      </span>
       <input
         id={id}
         type={type}
@@ -23,7 +27,7 @@ export const TextField: React.FC<{
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="block w-full rounded-[8px] border border-[#E3E3E3] bg-white px-4 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
+        className="block h-[44px] w-full rounded-[7px] border border-[#e5e7eb] bg-white px-4 text-[15px] text-[#18203a] placeholder:text-[#b0b9c9] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/10"
       />
       {error ? <span className="text-sm text-[#d43939]">{error}</span> : null}
     </label>
@@ -36,22 +40,24 @@ export const PasswordField: React.FC<{
   value: string
   onChange: (value: string) => void
   error?: string
-}> = ({ id, label, value, onChange, error }) => {
+  required?: boolean
+}> = ({ id, label, value, onChange, error, required = false }) => {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
     <label className="block space-y-2" htmlFor={id}>
-      <span className="text-[14px] font-medium text-[#111528]">{label}</span>
+      <span className="text-[15px] font-medium text-[#18203a]">
+        {label}
+        {required ? <span className="text-[#e11d48]">*</span> : null}
+      </span>
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-[#9CA3AF]">
-          <FaLock className="h-4 w-4" />
-        </span>
         <input
           id={id}
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="block w-full rounded-[8px] border border-[#E3E3E3] bg-white px-11 py-3 text-[16px] text-[#111528] placeholder:text-[#9CA3AF] shadow-sm outline-none transition focus:border-[#3758F9] focus:ring-2 focus:ring-[#3758F9]/12"
+          placeholder="Enter a strong password"
+          className="block h-[44px] w-full rounded-[7px] border border-[#e5e7eb] bg-white px-4 pr-11 text-[15px] text-[#18203a] placeholder:text-[#b0b9c9] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/10"
         />
         <button
           type="button"
@@ -70,7 +76,7 @@ export const PasswordField: React.FC<{
 
 export const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', children, ...props }) => {
   return (
-    <Button variant="default" className={`w-full ${className}`} {...props}>
+    <Button variant="default" className={`h-[48px] w-full rounded-[8px] bg-[#1050ff] text-[15px] font-medium text-white hover:bg-[#0b45e4] ${className}`} {...props}>
       {children}
     </Button>
   )
@@ -87,7 +93,7 @@ export const SocialButton: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex w-full items-center justify-center gap-3 rounded-[8px] border border-[#E3E3E3] bg-white px-4 py-3 text-[14px] font-medium text-[#111528] transition hover:border-[#3758F9] hover:text-[#3758F9]"
+      className="inline-flex h-[46px] w-full items-center justify-center gap-3 rounded-[8px] border border-[#e5e7eb] bg-white px-4 text-[15px] font-medium text-[#18203a] transition hover:border-[#cbd5e1] hover:bg-[#fafafa]"
     >
       <Icon className="h-4 w-4" />
       <span>{label}</span>
@@ -97,10 +103,8 @@ export const SocialButton: React.FC<{
 
 export const Divider: React.FC<{ label?: string }> = ({ label = 'OR' }) => {
   return (
-    <div className="flex items-center gap-4 py-1">
-      <span className="h-px flex-1 bg-[#E3E3E3]" />
-      <span className="text-[14px] font-medium uppercase tracking-[0.24em] text-[#9CA3AF]">{label}</span>
-      <span className="h-px flex-1 bg-[#E3E3E3]" />
+    <div className="flex justify-center py-1">
+      <span className="text-[14px] font-medium tracking-[0.08em] text-[#1f2937]">{label}</span>
     </div>
   )
 }
@@ -112,11 +116,11 @@ export const RadioGroup: React.FC<{
 }> = ({ label, value, onChange }) => {
   return (
     <fieldset className="space-y-3">
-      <legend className="text-[14px] font-medium text-[#111528]">{label}</legend>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <legend className="text-[15px] font-medium text-[#18203a]">{label}</legend>
+      <div className="flex flex-wrap items-center gap-8 pt-1">
         {[
-          { key: 'institution' as const, title: 'Institution', description: 'School, college, NGO' },
-          { key: 'organisation' as const, title: 'Organisation', description: 'Company, union, group' },
+          { key: 'institution' as const, title: 'Institution' },
+          { key: 'organisation' as const, title: 'Organisation' },
         ].map((option) => {
           const selected = value === option.key
           return (
@@ -124,15 +128,12 @@ export const RadioGroup: React.FC<{
               key={option.key}
               type="button"
               onClick={() => onChange(option.key)}
-              className={`rounded-[12px] border px-4 py-4 text-left transition ${selected ? 'border-[#3758F9] bg-[#3758F9]/5' : 'border-[#E3E3E3] bg-white hover:border-[#3758F9]/60'}`}
+              className="inline-flex items-center gap-4 text-left"
             >
-              <span className="flex items-center gap-3">
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selected ? 'border-[#3758F9]' : 'border-[#CBD5E1]'}`}>
-                  <span className={`h-2.5 w-2.5 rounded-full bg-[#3758F9] transition ${selected ? 'scale-100' : 'scale-0'}`} />
-                </span>
-                <span className="font-medium text-[#111528]">{option.title}</span>
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full border-[2px] ${selected ? 'border-[#3d5ef2]' : 'border-[#d7dbe5]'}`}>
+                <span className={`h-2.5 w-2.5 rounded-full bg-[#3d5ef2] transition ${selected ? 'scale-100' : 'scale-0'}`} />
               </span>
-              <span className="mt-2 block pl-8 text-sm text-[#6b7280]">{option.description}</span>
+              <span className="text-[15px] font-normal text-[#18203a]">{option.title}</span>
             </button>
           )
         })}

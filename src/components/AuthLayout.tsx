@@ -7,28 +7,61 @@ type AuthLayoutProps = {
   children: React.ReactNode
   footer?: React.ReactNode
   sideImageSrc?: string
+  illustration?: 'image' | 'signup'
 }
 
-const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, children, footer, sideImageSrc }) => {
+const SignUpIllustration: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#fdfdfd] text-[#111528] lg:flex">
-      <section className="flex min-h-screen flex-1 items-center justify-center px-6 py-10 sm:px-10 lg:px-24">
-        <div className="w-full max-w-[520px] space-y-8">
-          <img src={platformLogo} alt="Save our vote" className="h-12 w-auto max-w-[220px] object-contain" />
+    <div className="absolute inset-0 overflow-hidden bg-[#f5f2eb]">
+      <div className="absolute inset-x-0 bottom-0 h-[135px] bg-[#0b4d7e]" />
+      <div className="absolute inset-x-0 bottom-[135px] h-[138px] bg-[#5d86b4]" />
+      <div className="absolute inset-x-0 bottom-[182px] h-1 bg-[#104f82]" />
+
+      <div
+        className="absolute right-[-80px] top-[56px] h-[430px] w-[430px] bg-[#c5d3ea] opacity-55"
+        style={{ clipPath: 'polygon(60% 0, 100% 23%, 100% 77%, 84% 100%, 28% 75%, 0 52%, 24% 18%)', transform: 'rotate(18deg)' }}
+      />
+
+      <div
+        className="absolute right-[-4px] top-[48px] h-[132px] w-[120px] bg-[#9d6000]"
+        style={{ clipPath: 'polygon(42% 0, 100% 28%, 100% 72%, 62% 100%, 0 76%, 6% 20%)' }}
+      />
+
+      <div
+        className="absolute right-[8px] top-[72px] h-[104px] w-[78px] bg-[#7e4a00]"
+        style={{ clipPath: 'polygon(36% 0, 100% 22%, 100% 76%, 54% 100%, 0 72%, 7% 18%)' }}
+      />
+
+      <div
+        className="absolute right-[6px] top-[214px] h-[60px] w-[60px] rounded-full bg-[#c9928d]"
+        style={{ boxShadow: '0 0 0 5px #8b5100' }}
+      />
+    </div>
+  )
+}
+
+const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, children, footer, sideImageSrc, illustration = 'image' }) => {
+  return (
+    <div className="min-h-screen bg-[#fdfdfd] text-[#111528] lg:grid lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+      <section className="flex min-h-screen items-center justify-center px-6 py-8 sm:px-10 lg:px-16 xl:px-20">
+        <div className="w-full max-w-[540px] space-y-7">
+          <img src={platformLogo} alt="Save our vote" className="h-11 w-auto max-w-[170px] object-contain" />
 
           <div className="space-y-3">
-            <h1 className="text-[32px] font-medium leading-10 tracking-[-0.32px] text-[#111528]">{title}</h1>
+            <h1 className="text-[31px] font-normal leading-[1.12] tracking-[-0.03em] text-[#18203a]">{title}</h1>
             {subtitle ? <p className="max-w-[460px] text-[16px] leading-6 text-[#6b7280]">{subtitle}</p> : null}
           </div>
 
-          <div className="space-y-6">{children}</div>
+          <div className="space-y-5">{children}</div>
 
           {footer ? <div className="pt-1">{footer}</div> : null}
         </div>
       </section>
 
-      <aside className="relative hidden min-h-screen flex-[0_0_692px] overflow-hidden bg-[#eeece7] lg:block">
-        {sideImageSrc ? (
+      <aside className="relative hidden min-h-screen overflow-hidden lg:block">
+        {illustration === 'signup' ? (
+          <SignUpIllustration />
+        ) : sideImageSrc ? (
           <img src={sideImageSrc} alt="Onboarding illustration" className="absolute inset-0 h-full w-full object-cover object-center" />
         ) : (
           <>
