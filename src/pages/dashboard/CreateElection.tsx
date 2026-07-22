@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { FiChevronDown } from 'react-icons/fi'
+import React, { useMemo, useState, useCallback } from 'react'
+import { FiCheck, FiChevronDown, FiCircle } from 'react-icons/fi'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Checkbox } from '@/components/ui/checkbox'
 import BasicInformation from './CreateElection/BasicInformation'
 import Ballot from './CreateElection/Ballot'
 import Branding from './CreateElection/Branding'
@@ -19,14 +18,19 @@ import Preview from './CreateElection/Preview'
 import { createElectionSteps, type CreateElectionStepId } from './CreateElection/step-data'
 import Voters from './CreateElection/Voters'
 
-const stepContent: Record<CreateElectionStepId, React.ReactNode> = {
-  basic: <BasicInformation />,
-  voters: <Voters />,
-  ballot: <Ballot />,
-  emails: <Emails />,
-  branding: <Branding />,
-  preview: <Preview />,
-  launch: <Launch />,
+function StepIndicator({ completed }: { completed: boolean }) {
+  if (completed) {
+    return (
+      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#1050ff] text-white shrink-0">
+        <FiCheck size={12} strokeWidth={3} />
+      </span>
+    )
+  }
+  return (
+    <span className="flex items-center justify-center w-5 h-5 shrink-0">
+      <FiCircle size={14} className="text-slate-300" />
+    </span>
+  )
 }
 
 const CreateElection: React.FC = () => {
@@ -41,14 +45,31 @@ const CreateElection: React.FC = () => {
     launch: false,
   }))
 
-  const toggleComplete = (id: CreateElectionStepId) => {
-    setCompleted((prev) => ({ ...prev, [id]: !prev[id] }))
-  }
+  const stepIds = createElectionSteps.map((s) => s.id)
+
+  const handleNext = useCallback(() => {
+    const currentIndex = stepIds.indexOf(activeStep)
+    if (currentIndex < stepIds.length - 1) {
+      setCompleted((prev) => ({ ...prev, [activeStep]: true }))
+      const nextStep = stepIds[currentIndex + 1]
+      setActiveStep(nextStep)
+    }
+  }, [activeStep, stepIds])
 
   const activeStepLabel = useMemo(
     () => createElectionSteps.find((step) => step.id === activeStep)?.label ?? 'Basic Info',
     [activeStep],
   )
+
+  const stepContent = useMemo<Record<CreateElectionStepId, React.ReactNode>>(() => ({
+    basic: <BasicInformation onNext={handleNext} />,
+    voters: <Voters onNext={handleNext} />,
+    ballot: <Ballot onNext={handleNext} />,
+    emails: <Emails onNext={handleNext} />,
+    branding: <Branding onNext={handleNext} />,
+    preview: <Preview onNext={handleNext} />,
+    launch: <Launch onNext={handleNext} />,
+  }), [handleNext])
 
   return (
     <div className="space-y-6">
@@ -74,7 +95,7 @@ const CreateElection: React.FC = () => {
               {createElectionSteps.map((step) => (
                 <DropdownMenuItem key={step.id} onSelect={() => setActiveStep(step.id)} className={activeStep === step.id ? 'bg-[#eef2ff] text-[#0b45e4]' : ''}>
                   <div className="flex items-center gap-2">
-                    <Checkbox checked={completed[step.id]} onCheckedChange={() => toggleComplete(step.id)} />
+                    <StepIndicator completed={completed[step.id]} />
                     <step.icon className="h-4 w-4 text-slate-500" />
                     <span>{step.label}</span>
                   </div>
@@ -90,8 +111,12 @@ const CreateElection: React.FC = () => {
         <aside className="hidden md:block w-56 shrink-0">
           <ul className="space-y-2">
             {createElectionSteps.map((step) => (
-              <li key={step.id} className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${activeStep === step.id ? 'text-[#0b45e4] font-medium' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setActiveStep(step.id)}>
-                <Checkbox checked={completed[step.id]} onCheckedChange={() => toggleComplete(step.id)} />
+              <li
+                key={step.id}
+                className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${activeStep === step.id ? 'text-[#0b45e4] font-medium' : 'text-slate-700 hover:bg-slate-50'}`}
+                onClick={() => setActiveStep(step.id)}
+              >
+                <StepIndicator completed={completed[step.id]} />
                 <step.icon className="h-4 w-4 text-slate-500" />
                 <span>{step.label}</span>
               </li>

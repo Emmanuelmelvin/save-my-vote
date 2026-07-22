@@ -69,12 +69,18 @@ const DateField: React.FC<DateFieldProps> = ({ label, date, onChange }) => {
   )
 }
 
-const BasicInformation: React.FC = () => {
+interface BasicInformationProps {
+  onNext?: () => void
+}
+
+const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
   const [title, setTitle] = useState('')
   const [titleTouched, setTitleTouched] = useState(false)
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
+
+  const canProceed = title.trim().length > 0 && startDate && endDate
 
   return (
     <Card className="bg-white rounded-xl p-6 md:p-8 border border-slate-100 shadow-sm max-w-4xl mx-auto">
@@ -130,8 +136,12 @@ const BasicInformation: React.FC = () => {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-slate-50">
-          <Button className="px-6 h-11 font-medium rounded-md shadow-sm bg-[#1050ff] hover:bg-[#003fe6] text-white transition-colors">
-            Save & Continue
+          <Button
+            className="px-6 h-11 font-medium rounded-md shadow-sm bg-[#1050ff] hover:bg-[#003fe6] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!canProceed}
+            onClick={onNext}
+          >
+            Next
           </Button>
         </div>
       </div>
