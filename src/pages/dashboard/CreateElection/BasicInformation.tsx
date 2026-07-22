@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { FiFileText, FiInfo, FiCalendar } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
+import useCreateElectionStore from '@/store/createElection'
 
 interface DateFieldProps {
   label: string
@@ -74,11 +75,7 @@ interface BasicInformationProps {
 }
 
 const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
-  const [title, setTitle] = useState('')
-  const [titleTouched, setTitleTouched] = useState(false)
-  const [description, setDescription] = useState('')
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
+  const { title, description, startDate, endDate, setBasicInfo } = useCreateElectionStore()
 
   const canProceed = title.trim().length > 0 && startDate && endDate
 
@@ -94,17 +91,12 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
           <label className="block text-sm font-medium text-slate-700">Election title*</label>
           <Input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => setTitleTouched(true)}
+            onChange={(e) => setBasicInfo({ title: e.target.value, description, startDate, endDate })}
             className={cn(
-              "mt-2 w-full h-11 rounded-md px-3 text-sm border focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400",
-              titleTouched && !title.trim() ? 'border-rose-400' : 'border-slate-200'
+              "mt-2 w-full h-11 rounded-md px-3 text-sm border focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 border-slate-200"
             )}
             placeholder="Senate Elections 2025"
           />
-          {titleTouched && !title.trim() && (
-            <p className="mt-1.5 text-xs text-rose-500 font-medium">Please include your election name</p>
-          )}
         </div>
 
         <div>
@@ -116,7 +108,7 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
           </div>
           <Textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => setBasicInfo({ title, description: e.target.value, startDate, endDate })}
             className="mt-2 w-full border border-slate-200 rounded-md p-3 text-sm h-28 focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 resize-none"
             placeholder="This election will determine the new executives..."
           />
@@ -130,8 +122,8 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
             </Button>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <DateField label="Start date" date={startDate} onChange={setStartDate} />
-            <DateField label="End date" date={endDate} onChange={setEndDate} />
+            <DateField label="Start date" date={startDate} onChange={(d) => setBasicInfo({ title, description, startDate: d, endDate })} />
+            <DateField label="End date" date={endDate} onChange={(d) => setBasicInfo({ title, description, startDate, endDate: d })} />
           </div>
         </div>
 
