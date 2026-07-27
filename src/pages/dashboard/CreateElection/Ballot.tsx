@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { FiClipboard, FiEdit2, FiFileText, FiPlus, FiTrash2, FiUpload, FiX } from 'react-icons/fi'
 import { toast } from 'sonner'
+import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -14,34 +15,30 @@ interface BallotProps {
 
 type CandidateForm = {
   id: string
-  firstName: string
-  lastName: string
+  name: string
   photo?: string
 }
+
+const positionSchema = z.object({
+  title: z.string().trim().min(1, 'Position name is required'),
+})
 
 const candidateLabel = (count: number) => `${count} candidate${count === 1 ? '' : 's'}`
 
 const createCandidateForm = (): CandidateForm => ({
   id: crypto.randomUUID(),
-  firstName: '',
-  lastName: '',
+  name: '',
 })
 
-const candidateToForm = (candidate: Candidate): CandidateForm => {
-  const nameParts = candidate.name.trim().split(/\s+/)
-  return {
-    id: candidate.id,
-    firstName: candidate.firstName ?? nameParts[0] ?? '',
-    lastName: candidate.lastName ?? nameParts.slice(1).join(' '),
-    photo: candidate.photo,
-  }
-}
+const candidateToForm = (candidate: Candidate): CandidateForm => ({
+  id: candidate.id,
+  name: candidate.name,
+  photo: candidate.photo,
+})
 
 const formToCandidate = (form: CandidateForm): Candidate => ({
   id: form.id,
-  firstName: form.firstName.trim(),
-  lastName: form.lastName.trim(),
-  name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+  name: form.name.trim(),
   photo: form.photo,
 })
 
@@ -67,7 +64,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
     if (!editingPositionId) return
 
     const candidates = nextForms
-      .filter((form) => form.firstName.trim() && form.lastName.trim())
+      .filter((form) => form.name.trim())
       .map(formToCandidate)
 
     setPositions(positions.map((position) => position.id === editingPositionId
@@ -98,9 +95,20 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   }
 
   const savePosition = () => {
-    const title = positionTitle.trim()
-    if (!title) {
-      toast.error('Enter a position name before saving.')
+    const result = positionSchema.safeParse({ title: positionTitle })
+    if (!result.success) {
+      toast.error(result.error.errors[0].message)
+      return
+    }
+
+    const title = result.data.title
+
+    // Check for duplicate position title
+    const duplicateExists = positions.some(
+      (position) => position.title.toLowerCase() === title.toLowerCase() && position.id !== editingPositionId
+    )
+    if (duplicateExists) {
+      toast.error('A position with this name already exists.')
       return
     }
 
@@ -120,13 +128,12 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   }
 
   const hasPartialCandidate = () => candidateForms.some((form) => {
-    const hasFirstName = Boolean(form.firstName.trim())
-    const hasLastName = Boolean(form.lastName.trim())
-    return hasFirstName !== hasLastName
+    const trimmed = form.name.trim()
+    return trimmed.length > 0 && trimmed.split(/\s+/).length < 2
   })
 
-  const updateCandidateForm = (formId: string, field: 'firstName' | 'lastName', value: string) => {
-    const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, [field]: value } : form)
+  const updateCandidateForm = (formId: string, value: string) => {
+    const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, name: value } : form)
     setCandidateForms(nextForms)
     syncCandidateForms(nextForms)
   }
@@ -158,8 +165,8 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   }
 
   const addCandidateForm = () => {
-    if (hasPartialCandidate() || candidateForms.some((form) => !form.firstName.trim() || !form.lastName.trim())) {
-      toast.error('Enter both a first name and last name before adding another candidate.')
+    if (hasPartialCandidate() || candidateForms.some((form) => !form.name.trim())) {
+      toast.error('Enter a full name before adding another candidate.')
       return
     }
 
@@ -168,7 +175,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
 
   const startNewPosition = () => {
     if (hasPartialCandidate()) {
-      toast.error('Complete the candidate first name and last name before changing positions.')
+      toast.error('Complete the candidate name before changing positions.')
       return
     }
 
@@ -187,7 +194,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
     }
 
     if (hasPartialCandidate()) {
-      toast.error('Complete the candidate first name and last name before changing positions.')
+      toast.error('Complete the candidate name before changing positions.')
       return
     }
 
@@ -305,25 +312,25 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
 
               {activePosition ? (
                 <>
-                  <div className="mt-6"><h3 className="text-base font-medium text-[#111528]">Add candidates</h3><p className="mt-3 text-sm text-[#111528]">Enter each candidate's first name, last name, and an optional photo.</p></div>
+                  <div className="mt-6"><h3 className="text-base font-medium text-[#111528]">Add candidates</h3><p className="mt-3 text-sm text-[#111528]">Enter each candidate's full name and an optional photo.</p></div>
                   <div className="mt-5 space-y-3">
                     {candidateForms.map((form, index) => (
-                      <div key={form.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div><label htmlFor={`candidate-first-name-${form.id}`} className="block text-xs font-medium text-slate-600">First name<span className="text-rose-500">*</span></label><Input id={`candidate-first-name-${form.id}`} value={form.firstName} onChange={(event) => updateCandidateForm(form.id, 'firstName', event.target.value)} placeholder="Bola" className="mt-1.5 h-10 border-slate-200 text-sm" required /></div>
-                              <div><label htmlFor={`candidate-last-name-${form.id}`} className="block text-xs font-medium text-slate-600">Last name<span className="text-rose-500">*</span></label><Input id={`candidate-last-name-${form.id}`} value={form.lastName} onChange={(event) => updateCandidateForm(form.id, 'lastName', event.target.value)} placeholder="Tinubu" className="mt-1.5 h-10 border-slate-200 text-sm" required /></div>
-                            </div>
-                            <div className="mt-3 flex items-center gap-3">
-                              <input ref={(element) => { photoInputRefs.current[form.id] = element }} id={`candidate-photo-${form.id}`} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhotoChange(form.id, event)} />
-                              <Button type="button" variant="outline" className="h-8 gap-2 border-slate-300 px-3 text-xs text-slate-700" onClick={() => photoInputRefs.current[form.id]?.click()}><FiUpload className="h-3.5 w-3.5" />{form.photo ? 'Change image' : 'Upload image'}</Button>
-                              {form.photo && <img src={form.photo} alt={`${form.firstName} ${form.lastName}`} className="h-8 w-8 rounded-full object-cover" />}
-                              <span className="text-xs text-slate-400">Optional</span>
-                            </div>
-                          </div>
-                          <button type="button" onClick={() => deleteCandidateForm(form.id)} className="mt-5 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete candidate ${index + 1}`}><FiTrash2 className="h-4 w-4" /></button>
+                      <div key={form.id} className="flex items-center gap-3">
+                        <input ref={(element) => { photoInputRefs.current[form.id] = element }} id={`candidate-photo-${form.id}`} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhotoChange(form.id, event)} />
+                        {form.photo ? (
+                          <button type="button" onClick={() => photoInputRefs.current[form.id]?.click()} className="shrink-0 self-start mt-7" aria-label="Change photo">
+                            <img src={form.photo} alt={form.name || 'Candidate'} className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-200 hover:ring-[#003dff] transition-all" />
+                          </button>
+                        ) : (
+                          <Button type="button" variant="outline" className="shrink-0 self-start mt-7 h-10 w-10 rounded-full border-slate-300 p-0 text-slate-700" onClick={() => photoInputRefs.current[form.id]?.click()} aria-label="Upload photo">
+                            <FiUpload className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <label htmlFor={`candidate-name-${form.id}`} className="block text-xs font-medium text-slate-600">Full name<span className="text-rose-500">*</span></label>
+                          <Input id={`candidate-name-${form.id}`} value={form.name} onChange={(event) => updateCandidateForm(form.id, event.target.value)} placeholder="Bola Tinubu" className="mt-1.5 h-10 border-slate-200 text-sm" required />
                         </div>
+                        <button type="button" onClick={() => deleteCandidateForm(form.id)} className="shrink-0 self-start mt-7 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete candidate ${index + 1}`}><FiTrash2 className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>
