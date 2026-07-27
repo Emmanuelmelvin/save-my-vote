@@ -10,14 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import BasicInformation from './CreateElection/BasicInformation'
-import Ballot from './CreateElection/Ballot'
-import Branding from './CreateElection/Branding'
-import Emails from './CreateElection/Emails'
-import Launch from './CreateElection/Launch'
-import Preview from './CreateElection/Preview'
-import { createElectionSteps, type CreateElectionStepId } from './CreateElection/step-data'
-import Voters from './CreateElection/Voters'
+import BasicInformation from '@/pages/dashboard/CreateElection/BasicInformation'
+import Ballot from '@/pages/dashboard/CreateElection/Ballot'
+import Branding from '@/pages/dashboard/CreateElection/Branding'
+import Emails from '@/pages/dashboard/CreateElection/Emails'
+import Launch from '@/pages/dashboard/CreateElection/Launch'
+import Preview from '@/pages/dashboard/CreateElection/Preview'
+import { createElectionSteps, type CreateElectionStepId } from '@/pages/dashboard/CreateElection/step-data'
+import Voters from '@/pages/dashboard/CreateElection/Voters'
 import useCreateElectionStore from '@/store/createElection'
 
 interface CreateElectionProps {
@@ -68,8 +68,8 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
     ballot: <Ballot onNext={handleNext} />,
     emails: <Emails onNext={handleNext} />,
     branding: <Branding onNext={handleNext} />,
-    preview: <Preview onNext={handleNext} onEdit={(step) => setActiveStep(step)} />,
-    launch: <Launch onNext={handleNext} />,
+    preview: <Preview onNext={handleNext} />,
+    launch: <Launch onNext={handleNext} onEdit={(step) => setActiveStep(step)} />,
   }), [handleNext])
 
   return (
