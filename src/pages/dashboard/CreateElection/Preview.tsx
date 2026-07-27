@@ -15,17 +15,17 @@ const Preview: React.FC<PreviewProps> = ({ onNext }) => {
   const { title, description, startDate, endDate, voters, positions, emailTemplates, branding } = useCreateElectionStore()
 
   return (
-    <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+    <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-7 flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#1050ff]"><FiEye size={18} /></span>
         <div>
-          <h3 className="text-lg font-semibold text-slate-800">Preview</h3>
+          <h3 className="text-base font-semibold text-slate-800">Preview</h3>
           <p className="mt-0.5 text-sm text-slate-500">Review the election before you publish it.</p>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="p-6 text-white" style={{ background: branding.heroImage ? `linear-gradient(90deg, ${branding.primaryColor}e6, ${branding.primaryColor}99), url(${branding.heroImage}) center/cover` : branding.primaryColor }}>
+        <div className="p-5 text-white" style={{ background: branding.heroImage ? `linear-gradient(90deg, ${branding.primaryColor}e6, ${branding.primaryColor}99), url(${branding.heroImage}) center/cover` : branding.primaryColor }}>
           <div className="flex items-center gap-3">
             {branding.logo ? <img src={branding.logo} alt="Election logo" className="h-10 w-10 rounded-lg bg-white object-contain p-1" /> : <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20"><FiEye className="h-5 w-5" /></div>}
             <span className="text-sm font-medium text-white/80">Save our vote</span>

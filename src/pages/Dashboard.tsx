@@ -44,21 +44,23 @@ const Dashboard: React.FC = () => {
 
       <div className="min-w-0 flex flex-col md:ml-64 md:h-screen">
         {/* Mobile topbar */}
-        <header className="flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:hidden">
-          <img src={logo} alt="logo" className="h-8 w-auto" />
-          <h1 className="flex-1 px-4 text-center text-lg font-medium">
-            {activePage === 'create' ? 'Create Election' : 'Dashboard'}
-          </h1>
-          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Open menu">
-            <FiMenu size={20} />
-          </Button>
-        </header>
+        {activePage !== 'create' && (
+          <header className="flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:hidden">
+            <img src={logo} alt="logo" className="h-8 w-auto" />
+            <h1 className="flex-1 px-4 text-center text-lg font-medium">Dashboard</h1>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Open menu">
+              <FiMenu size={20} />
+            </Button>
+          </header>
+        )}
 
         {/* Desktop topbar */}
-        <header className="hidden items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:flex">
-          <h1 className="text-lg font-medium">{activePage === 'create' ? 'Create Election' : 'Dashboard'}</h1>
-          <div />
-        </header>
+        {activePage !== 'create' && (
+          <header className="hidden items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:flex">
+            <h1 className="text-lg font-medium">Dashboard</h1>
+            <div />
+          </header>
+        )}
 
         {/* Mobile slide-over sidebar */}
         {open && (
@@ -89,11 +91,11 @@ const Dashboard: React.FC = () => {
           </>
         )}
 
-        <main className="flex-1 overflow-auto p-8">
-          <div className="max-w-6xl mx-auto">
-            {activePage === 'create' ? (
-              <CreateElection />
-            ) : (
+        <main className={activePage === 'create' ? 'flex-1 overflow-auto' : 'flex-1 overflow-auto p-8'}>
+          {activePage === 'create' ? (
+            <CreateElection />
+          ) : (
+            <div className="mx-auto max-w-6xl">
               <>
                 <section className="mb-6">
                   <h2 className="text-sm font-semibold text-slate-700 mb-4">All Elections</h2>
@@ -115,8 +117,8 @@ const Dashboard: React.FC = () => {
                   </div>
                 </section>
               </>
-            )}
-          </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

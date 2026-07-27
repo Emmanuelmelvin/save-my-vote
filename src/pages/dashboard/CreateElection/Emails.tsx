@@ -47,11 +47,11 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
   }
 
   return (
-    <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+    <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-7 flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#1050ff]"><FiMail size={18} /></span>
         <div>
-          <h3 className="text-lg font-semibold text-slate-800">Emails</h3>
+          <h3 className="text-base font-semibold text-slate-800">Emails</h3>
           <p className="mt-0.5 text-sm text-slate-500">Create the automated messages voters receive during the election.</p>
         </div>
       </div>

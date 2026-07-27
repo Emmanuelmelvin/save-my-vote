@@ -52,10 +52,10 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   }
 
   return (
-    <Card className="bg-white rounded-xl p-6 md:p-8 border border-slate-100 shadow-sm max-w-4xl mx-auto">
+    <Card className="bg-white rounded-xl p-5 md:p-6 border border-slate-100 shadow-sm max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <FiList size={20} className="text-slate-700" />
-        <h3 className="text-lg font-semibold text-slate-800">Ballot</h3>
+        <h3 className="text-base font-semibold text-slate-800">Ballot</h3>
       </div>
 
       <div className="space-y-6">

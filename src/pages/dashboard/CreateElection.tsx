@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react'
-import { FiCheck, FiChevronDown, FiCircle } from 'react-icons/fi'
+import { FiCheck, FiChevronDown } from 'react-icons/fi'
+
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,25 +18,23 @@ import Launch from './CreateElection/Launch'
 import Preview from './CreateElection/Preview'
 import { createElectionSteps, type CreateElectionStepId } from './CreateElection/step-data'
 import Voters from './CreateElection/Voters'
+import useCreateElectionStore from '@/store/createElection'
 
-function StepIndicator({ completed }: { completed: boolean }) {
+function StepIndicator({ completed, active }: { completed: boolean; active: boolean }) {
   if (completed) {
     return (
-      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#1050ff] text-white shrink-0">
-        <FiCheck size={12} strokeWidth={3} />
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] bg-[#003dff] text-white">
+        <FiCheck size={13} strokeWidth={3} />
       </span>
     )
   }
-  return (
-    <span className="flex items-center justify-center w-5 h-5 shrink-0">
-      <FiCircle size={14} className="text-slate-300" />
-    </span>
-  )
+
+  return <span className={`h-5 w-5 shrink-0 rounded-[4px] border ${active ? 'border-[#003dff] bg-[#efeff1]' : 'border-[#111528] bg-[#efeff1]'}`} />
 }
 
 const CreateElection: React.FC = () => {
+  const { title } = useCreateElectionStore()
   const [activeStep, setActiveStep] = useState<CreateElectionStepId>('basic')
-  const [launched, setLaunched] = useState(false)
   const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => ({
     basic: false,
     voters: false,
@@ -46,19 +45,12 @@ const CreateElection: React.FC = () => {
     launch: false,
   }))
 
-  const stepIds = createElectionSteps.map((s) => s.id)
+  const stepIds = createElectionSteps.map((step) => step.id)
 
   const handleNext = useCallback(() => {
     const currentIndex = stepIds.indexOf(activeStep)
-    if (currentIndex < stepIds.length - 1) {
-      setCompleted((prev) => ({ ...prev, [activeStep]: true }))
-      const nextStep = stepIds[currentIndex + 1]
-      setActiveStep(nextStep)
-      return
-    }
-
-    setCompleted((prev) => ({ ...prev, [activeStep]: true }))
-    setLaunched(true)
+    setCompleted((previous) => ({ ...previous, [activeStep]: true }))
+    if (currentIndex < stepIds.length - 1) setActiveStep(stepIds[currentIndex + 1])
   }, [activeStep, stepIds])
 
   const activeStepLabel = useMemo(
@@ -77,66 +69,51 @@ const CreateElection: React.FC = () => {
   }), [handleNext])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-sm text-slate-500">Choose a section and continue building your election.</p>
-          </div>
-        </div>
+    <div className="min-h-full bg-[#f8f8f8] text-[#111528]">
+      <header className="flex h-[72px] items-center border-b border-[#e3e3e3] bg-white px-8 max-[760px]:px-5">
+        <p className="font-['Manrope'] text-[16px] font-medium leading-6">{title || 'Senate Elections 2026'}</p>
+      </header>
 
-        {/* Mobile dropdown only */}
-        <div className="md:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-56 justify-between rounded-md border-slate-200 bg-white px-4 py-3 text-left text-slate-700 shadow-sm hover:bg-slate-50">
-                <span>{activeStepLabel}</span>
-                <FiChevronDown className="text-slate-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64">
-              <DropdownMenuLabel>Sections</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {createElectionSteps.map((step) => (
-                <DropdownMenuItem key={step.id} onSelect={() => setActiveStep(step.id)} className={activeStep === step.id ? 'bg-[#eef2ff] text-[#0b45e4]' : ''}>
-                  <div className="flex items-center gap-2">
-                    <StepIndicator completed={completed[step.id]} />
-                    <step.icon className="h-4 w-4 text-slate-500" />
-                    <span>{step.label}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {launched && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-          <FiCheck className="h-4 w-4" />
-          Your election is ready to launch. You can still revisit any step before publishing.
-        </div>
-      )}
-
-      <div className="flex gap-6">
-        {/* Desktop steps sidebar */}
-        <aside className="hidden w-56 shrink-0 md:block">
-          <ul className="space-y-1">
-            {createElectionSteps.map((step) => (
-              <li
-                key={step.id}
-                className={`relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 transition-colors ${activeStep === step.id ? 'bg-[#eef2ff] font-semibold text-[#0b45e4]' : 'text-slate-600 hover:bg-slate-50'}`}
-                onClick={() => setActiveStep(step.id)}
-              >
-                <StepIndicator completed={completed[step.id]} />
-                <step.icon className={`h-4 w-4 ${activeStep === step.id ? 'text-[#0b45e4]' : 'text-slate-400'}`} />
-                <span className="text-sm">{step.label}</span>
+      <div className="flex min-h-[calc(100vh-72px)] max-[760px]:flex-col">
+        <aside className="w-[210px] shrink-0 border-r border-[#e3e3e3] px-4 pb-[10px] pt-7 max-[760px]:w-full max-[760px]:border-r-0 max-[760px]:px-5 max-[760px]:pb-0 max-[760px]:pt-5">
+          <ul className="flex w-[178px] flex-col gap-2 max-[760px]:hidden">
+            {createElectionSteps.filter((step) => step.id !== 'preview').map((step) => (
+              <li key={step.id} className={`flex h-11 w-[178px] cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors ${activeStep === step.id ? 'bg-white text-[#003dff]' : 'text-[#111528] hover:bg-white/70'}`} onClick={() => setActiveStep(step.id)}>
+                <StepIndicator completed={completed[step.id]} active={activeStep === step.id} />
+                <step.icon className={`h-5 w-5 shrink-0 ${activeStep === step.id ? 'text-[#003dff]' : 'text-[#111528]'}`} />
+                <span className="whitespace-nowrap font-['Manrope'] text-[16px] font-medium leading-6">{step.label}</span>
               </li>
             ))}
           </ul>
+
+          <div className="mt-3 hidden max-[760px]:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10 w-full justify-between rounded-lg border-slate-200 bg-white px-3 text-left text-slate-700">
+                  <span>{activeStepLabel}</span>
+                  <FiChevronDown className="text-slate-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64">
+                <DropdownMenuLabel>Sections</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {createElectionSteps.map((step) => (
+                  <DropdownMenuItem key={step.id} onSelect={() => setActiveStep(step.id)}>
+                    <StepIndicator completed={completed[step.id]} active={activeStep === step.id} />
+                    <step.icon className="h-4 w-4 text-slate-500" />
+                    <span>{step.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </aside>
 
-        <div className="min-w-0 flex-1">{stepContent[activeStep]}</div>
+        <main className="min-w-0 flex-1 px-7 pb-10 pt-9 max-[760px]:w-full max-[760px]:px-5 max-[760px]:pt-6">
+          <div className="ml-12 max-w-[600px] max-[900px]:mx-auto max-[760px]:ml-0 max-[760px]:max-w-none">
+            {stepContent[activeStep]}
+          </div>
+        </main>
       </div>
     </div>
   )
