@@ -35,6 +35,7 @@ function StepIndicator({ completed }: { completed: boolean }) {
 
 const CreateElection: React.FC = () => {
   const [activeStep, setActiveStep] = useState<CreateElectionStepId>('basic')
+  const [launched, setLaunched] = useState(false)
   const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => ({
     basic: false,
     voters: false,
@@ -53,7 +54,11 @@ const CreateElection: React.FC = () => {
       setCompleted((prev) => ({ ...prev, [activeStep]: true }))
       const nextStep = stepIds[currentIndex + 1]
       setActiveStep(nextStep)
+      return
     }
+
+    setCompleted((prev) => ({ ...prev, [activeStep]: true }))
+    setLaunched(true)
   }, [activeStep, stepIds])
 
   const activeStepLabel = useMemo(
@@ -76,7 +81,7 @@ const CreateElection: React.FC = () => {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>
-            <p className="mt-1 text-sm text-slate-500">Choose a section and continue building your election.</p>
+            <p className="text-sm text-slate-500">Choose a section and continue building your election.</p>
           </div>
         </div>
 
@@ -106,25 +111,32 @@ const CreateElection: React.FC = () => {
         </div>
       </div>
 
+      {launched && (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          <FiCheck className="h-4 w-4" />
+          Your election is ready to launch. You can still revisit any step before publishing.
+        </div>
+      )}
+
       <div className="flex gap-6">
         {/* Desktop steps sidebar */}
-        <aside className="hidden md:block w-56 shrink-0">
-          <ul className="space-y-2">
+        <aside className="hidden w-56 shrink-0 md:block">
+          <ul className="space-y-1">
             {createElectionSteps.map((step) => (
               <li
                 key={step.id}
-                className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${activeStep === step.id ? 'text-[#0b45e4] font-medium' : 'text-slate-700 hover:bg-slate-50'}`}
+                className={`relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 transition-colors ${activeStep === step.id ? 'bg-[#eef2ff] font-semibold text-[#0b45e4]' : 'text-slate-600 hover:bg-slate-50'}`}
                 onClick={() => setActiveStep(step.id)}
               >
                 <StepIndicator completed={completed[step.id]} />
-                <step.icon className="h-4 w-4 text-slate-500" />
-                <span>{step.label}</span>
+                <step.icon className={`h-4 w-4 ${activeStep === step.id ? 'text-[#0b45e4]' : 'text-slate-400'}`} />
+                <span className="text-sm">{step.label}</span>
               </li>
             ))}
           </ul>
         </aside>
 
-        <div className="flex-1 min-w-0">{stepContent[activeStep]}</div>
+        <div className="min-w-0 flex-1">{stepContent[activeStep]}</div>
       </div>
     </div>
   )

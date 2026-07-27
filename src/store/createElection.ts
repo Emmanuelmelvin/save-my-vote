@@ -4,6 +4,8 @@ export type Voter = {
   id: string
   name: string
   email: string
+  voterId?: string
+  voterKey?: string
 }
 
 export type Candidate = {

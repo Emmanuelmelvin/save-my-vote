@@ -77,13 +77,16 @@ interface BasicInformationProps {
 const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
   const { title, description, startDate, endDate, setBasicInfo } = useCreateElectionStore()
 
-  const canProceed = title.trim().length > 0 && startDate && endDate
+  const canProceed = title.trim().length > 0 && Boolean(startDate && endDate && endDate > startDate)
 
   return (
-    <Card className="bg-white rounded-xl p-6 md:p-8 border border-slate-100 shadow-sm max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <FiFileText size={20} className="text-slate-700" />
-        <h3 className="text-lg font-semibold text-slate-800">Basic Information</h3>
+    <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+      <div className="mb-7 flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#1050ff]"><FiFileText size={18} /></span>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800">Basic Information</h3>
+          <p className="mt-0.5 text-sm text-slate-500">Set the details voters will see before they cast a ballot.</p>
+        </div>
       </div>
 
       <div className="space-y-5">
@@ -127,7 +130,11 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-slate-50">
+        {startDate && endDate && endDate <= startDate && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">End date and time must be after the start date and time.</p>
+        )}
+
+        <div className="flex justify-end border-t border-slate-100 pt-5">
           <Button
             className="px-6 h-11 font-medium rounded-md shadow-sm bg-[#1050ff] hover:bg-[#003fe6] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!canProceed}
