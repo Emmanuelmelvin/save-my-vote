@@ -12,6 +12,7 @@ export type Candidate = {
   id: string
   name: string
   description?: string
+  photo?: string
 }
 
 export type Position = {
