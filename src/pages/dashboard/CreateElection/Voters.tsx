@@ -279,7 +279,7 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
               </Button>
             </div>
           </>
-        )
+        )}
       </Card>
 
       {notice && (
