@@ -11,6 +11,8 @@ export type Voter = {
 export type Candidate = {
   id: string
   name: string
+  firstName?: string
+  lastName?: string
   description?: string
   photo?: string
 }

@@ -12,119 +12,126 @@ interface BallotProps {
   onNext?: () => void
 }
 
-type DraftPhoto = {
-  name: string
-  size: string
-  url: string
+type CandidateForm = {
+  id: string
+  firstName: string
+  lastName: string
+  photo?: string
 }
 
-const formatFileSize = (bytes: number) => `${(bytes / 1024).toFixed(1)}kb`
+const candidateLabel = (count: number) => `${count} candidate${count === 1 ? '' : 's'}`
+
+const createCandidateForm = (): CandidateForm => ({
+  id: crypto.randomUUID(),
+  firstName: '',
+  lastName: '',
+})
+
+const candidateToForm = (candidate: Candidate): CandidateForm => {
+  const nameParts = candidate.name.trim().split(/\s+/)
+  return {
+    id: candidate.id,
+    firstName: candidate.firstName ?? nameParts[0] ?? '',
+    lastName: candidate.lastName ?? nameParts.slice(1).join(' '),
+    photo: candidate.photo,
+  }
+}
+
+const formToCandidate = (form: CandidateForm): Candidate => ({
+  id: form.id,
+  firstName: form.firstName.trim(),
+  lastName: form.lastName.trim(),
+  name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+  photo: form.photo,
+})
+
+const CandidateAvatar: React.FC<{ candidate: Candidate; className?: string }> = ({ candidate, className = 'h-8 w-8 text-xs' }) => (
+  candidate.photo
+    ? <img src={candidate.photo} alt={candidate.name} className={`shrink-0 rounded-full object-cover ${className}`} />
+    : <span title={candidate.name} aria-label={candidate.name} className={`flex shrink-0 items-center justify-center rounded-full bg-[#e8edff] font-semibold text-[#003dff] ${className}`}>{candidate.name.slice(0, 1).toUpperCase()}</span>
+)
 
 const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   const { positions, setPositions } = useCreateElectionStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingPositionId, setEditingPositionId] = useState<string | null>(null)
   const [positionTitle, setPositionTitle] = useState('')
-  const [candidateName, setCandidateName] = useState('')
-  const [draftPhoto, setDraftPhoto] = useState<DraftPhoto | null>(null)
-  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [positionTitleEditing, setPositionTitleEditing] = useState(false)
+  const [candidateForms, setCandidateForms] = useState<CandidateForm[]>([])
+  const [expandedPositions, setExpandedPositions] = useState<Record<string, boolean>>({})
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
-  const resetCandidate = () => {
-    setCandidateName('')
-    setDraftPhoto(null)
-    if (photoInputRef.current) photoInputRef.current.value = ''
+  const activePosition = positions.find((position) => position.id === editingPositionId) ?? null
+
+  const syncCandidateForms = (nextForms: CandidateForm[]) => {
+    if (!editingPositionId) return
+
+    const candidates = nextForms
+      .filter((form) => form.firstName.trim() && form.lastName.trim())
+      .map(formToCandidate)
+
+    setPositions(positions.map((position) => position.id === editingPositionId
+      ? { ...position, candidates }
+      : position))
+  }
+
+  const resetDrawerState = () => {
+    setEditingPositionId(null)
+    setPositionTitle('')
+    setPositionTitleEditing(false)
+    setCandidateForms([])
+    photoInputRefs.current = {}
   }
 
   const openPositionDrawer = (position?: Position) => {
     setEditingPositionId(position?.id ?? null)
     setPositionTitle(position?.title ?? '')
-    resetCandidate()
+    setPositionTitleEditing(!position)
+    setCandidateForms(position ? [...position.candidates.map(candidateToForm), createCandidateForm()] : [])
+    photoInputRefs.current = {}
     setDrawerOpen(true)
   }
 
   const closeDrawer = () => {
     setDrawerOpen(false)
-    setEditingPositionId(null)
-    resetCandidate()
+    resetDrawerState()
   }
 
-  const savePosition = (): string | null => {
+  const savePosition = () => {
     const title = positionTitle.trim()
     if (!title) {
       toast.error('Enter a position name before saving.')
-      return null
+      return
     }
 
     if (editingPositionId) {
       setPositions(positions.map((position) => position.id === editingPositionId ? { ...position, title } : position))
+      setPositionTitleEditing(false)
       toast.success('Position saved')
-      return editingPositionId
+      return
     }
 
     const position: Position = { id: crypto.randomUUID(), title, candidates: [] }
     setPositions([...positions, position])
     setEditingPositionId(position.id)
+    setCandidateForms([createCandidateForm()])
+    setPositionTitleEditing(false)
     toast.success('Position saved')
-    return position.id
   }
 
-  const saveCandidate = () => {
-    const name = candidateName.trim()
-    if (!name) {
-      toast.error('Enter a candidate name before saving.')
-      return
-    }
+  const hasPartialCandidate = () => candidateForms.some((form) => {
+    const hasFirstName = Boolean(form.firstName.trim())
+    const hasLastName = Boolean(form.lastName.trim())
+    return hasFirstName !== hasLastName
+  })
 
-    const title = positionTitle.trim()
-    if (!title) {
-      toast.error('Enter a position name before adding a candidate.')
-      return
-    }
-
-    const candidate: Candidate = {
-      id: crypto.randomUUID(),
-      name,
-      photo: draftPhoto?.url,
-    }
-
-    if (editingPositionId) {
-      setPositions(positions.map((position) => position.id === editingPositionId
-        ? { ...position, title, candidates: [...position.candidates, candidate] }
-        : position))
-    } else {
-      const position: Position = { id: crypto.randomUUID(), title, candidates: [candidate] }
-      setPositions([...positions, position])
-      setEditingPositionId(position.id)
-    }
-
-    toast.success('Candidate saved')
-    resetCandidate()
+  const updateCandidateForm = (formId: string, field: 'firstName' | 'lastName', value: string) => {
+    const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, [field]: value } : form)
+    setCandidateForms(nextForms)
+    syncCandidateForms(nextForms)
   }
 
-  const deletePosition = () => {
-    if (!editingPositionId) {
-      toast.error('Save the position before deleting it.')
-      return
-    }
-
-    setPositions(positions.filter((position) => position.id !== editingPositionId))
-    toast.success('Position deleted')
-    closeDrawer()
-  }
-
-  const removeCandidate = (positionId: string, candidateId: string) => {
-    setPositions(positions.map((position) => position.id === positionId
-      ? { ...position, candidates: position.candidates.filter((candidate) => candidate.id !== candidateId) }
-      : position))
-    toast.success('Candidate removed')
-  }
-
-  const clearBallot = () => {
-    setPositions([])
-    toast.success('Ballot cleared')
-  }
-
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (formId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
@@ -134,9 +141,74 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
     }
 
     const reader = new FileReader()
-    reader.onload = () => setDraftPhoto({ name: file.name, size: formatFileSize(file.size), url: String(reader.result) })
+    reader.onload = () => {
+      const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, photo: String(reader.result) } : form)
+      setCandidateForms(nextForms)
+      syncCandidateForms(nextForms)
+    }
     reader.onerror = () => toast.error('We could not read that photo. Please try another image.')
     reader.readAsDataURL(file)
+  }
+
+  const deleteCandidateForm = (formId: string) => {
+    const nextForms = candidateForms.filter((form) => form.id !== formId)
+    const formsWithFallback = nextForms.length > 0 ? nextForms : [createCandidateForm()]
+    setCandidateForms(formsWithFallback)
+    syncCandidateForms(formsWithFallback)
+  }
+
+  const addCandidateForm = () => {
+    if (hasPartialCandidate() || candidateForms.some((form) => !form.firstName.trim() || !form.lastName.trim())) {
+      toast.error('Enter both a first name and last name before adding another candidate.')
+      return
+    }
+
+    setCandidateForms([...candidateForms, createCandidateForm()])
+  }
+
+  const startNewPosition = () => {
+    if (hasPartialCandidate()) {
+      toast.error('Complete the candidate first name and last name before changing positions.')
+      return
+    }
+
+    setEditingPositionId(null)
+    setPositionTitle('')
+    setCandidateForms([])
+    setPositionTitleEditing(true)
+    photoInputRefs.current = {}
+  }
+
+  const handlePositionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = event.target.value
+    if (selectedId === 'new') {
+      startNewPosition()
+      return
+    }
+
+    if (hasPartialCandidate()) {
+      toast.error('Complete the candidate first name and last name before changing positions.')
+      return
+    }
+
+    const selectedPosition = positions.find((position) => position.id === selectedId)
+    if (selectedPosition) openPositionDrawer(selectedPosition)
+  }
+
+  const deletePosition = (positionId: string) => {
+    setPositions(positions.filter((position) => position.id !== positionId))
+    toast.success('Position deleted')
+    if (editingPositionId === positionId) closeDrawer()
+  }
+
+  const clearBallot = () => {
+    setPositions([])
+    closeDrawer()
+    toast.success('Ballot cleared')
+  }
+
+  const togglePositionExpanded = (positionId: string) => {
+    setExpandedPositions((current) => ({ ...current, [positionId]: !current[positionId] }))
   }
 
   return (
@@ -151,25 +223,56 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
         </Card>
       ) : (
         <div>
-          <div className="space-y-4">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold text-[#111528]">Ballot positions</h2>
+            <p className="mt-1 text-sm text-slate-500">Add the positions and candidates voters will choose from.</p>
+          </div>
+
+          <div className="space-y-3">
             {positions.map((position) => (
-              <Card key={position.id} className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-0 shadow-none">
-                <div className="border-b border-[#e3e3e3] px-7 py-4"><h2 className="text-base font-medium text-[#111528]">{position.title}</h2></div>
-                <div className="px-4 py-1">
-                  {position.candidates.length > 0 ? position.candidates.map((candidate) => (
-                    <div key={candidate.id} className="group flex items-center gap-4 border-b border-[#e3e3e3] px-2 py-3 last:border-0">
-                      {candidate.photo ? <img src={candidate.photo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8edff] text-lg font-medium text-[#003dff]">{candidate.name.slice(0, 1).toUpperCase()}</div>}
-                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-[#111528]">{candidate.name}</p>
-                      <button type="button" onClick={() => removeCandidate(position.id, candidate.id)} className="rounded p-2 text-slate-400 opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100" aria-label={`Remove ${candidate.name}`}><FiTrash2 className="h-4 w-4" /></button>
+              <Card key={position.id} className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-none">
+                <div className="flex items-start gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <p className="truncate text-base font-semibold text-[#111528]">{position.title}</p>
+                      <p className="text-sm text-slate-500">{candidateLabel(position.candidates.length)}</p>
                     </div>
-                  )) : <p className="px-2 py-5 text-sm text-slate-400">No candidates added yet.</p>}
+                    {position.candidates.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {(expandedPositions[position.id] ? position.candidates : position.candidates.slice(0, 3)).map((candidate) => (
+                          <div key={candidate.id} className="flex items-center gap-2 rounded-full border border-slate-100 bg-slate-50 py-1 pl-1 pr-3">
+                            <CandidateAvatar candidate={candidate} />
+                            <span className="max-w-[140px] truncate text-xs font-medium text-slate-700">{candidate.name}</span>
+                          </div>
+                        ))}
+                        {position.candidates.length > 3 && <button type="button" onClick={() => togglePositionExpanded(position.id)} className="rounded-full px-2 py-1 text-xs font-medium text-[#003dff] hover:bg-[#eef2ff]">{expandedPositions[position.id] ? 'Show less' : `Show more +${position.candidates.length - 3}`}</button>}
+                      </div>
+                    ) : <p className="mt-3 text-sm text-slate-400">No candidates added yet.</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button variant="secondary" className="h-9 gap-2 rounded-lg bg-[#e8edff] px-3 text-sm text-[#003dff] hover:bg-[#dce4ff]" onClick={() => openPositionDrawer(position)}>
+                      <FiEdit2 className="h-4 w-4" />Edit
+                    </Button>
+                    <Button variant="ghost" className="h-9 gap-2 rounded-lg px-3 text-sm text-slate-500 hover:bg-rose-50 hover:text-rose-600" onClick={() => deletePosition(position.id)}>
+                      <FiTrash2 className="h-4 w-4" />Delete
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex justify-end px-5 pb-5"><Button variant="secondary" className="h-9 gap-2 rounded-lg bg-[#e8edff] px-3 text-sm text-[#003dff] hover:bg-[#dce4ff]" onClick={() => openPositionDrawer(position)}>Edit <FiEdit2 className="h-4 w-4" /></Button></div>
               </Card>
             ))}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3"><Button className="h-10 gap-2 rounded-lg bg-[#003dff] px-4 text-sm text-white hover:bg-[#0034d9]" onClick={() => openPositionDrawer()}>Add another position <FiPlus className="h-4 w-4" /></Button><Button variant="ghost" className="h-10 text-sm text-slate-500 hover:text-rose-600" onClick={clearBallot}>Clear Ballot</Button></div>
-          <div className="mt-10 flex items-center justify-end gap-3"><Button variant="ghost" className="h-11 px-5 text-base text-[#111528]">Go Back</Button><Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={onNext}>Save and continue</Button></div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button variant="outline" className="h-10 gap-2 rounded-lg border-[#3758f9] px-4 text-sm text-[#003dff] hover:bg-[#eef2ff] hover:text-[#003dff]" onClick={() => openPositionDrawer()}>
+              <FiPlus className="h-4 w-4" />Add another position
+            </Button>
+            <Button variant="ghost" className="h-10 text-sm text-slate-500 hover:text-rose-600" onClick={clearBallot}>Clear ballot</Button>
+          </div>
+
+          <div className="mt-10 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+            <Button variant="ghost" className="h-11 px-5 text-base text-[#111528]">Go Back</Button>
+            <Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={onNext}>Save and continue</Button>
+          </div>
         </div>
       )}
 
@@ -178,25 +281,59 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
           <button type="button" className="min-w-0 flex-1 cursor-default" aria-label="Close position panel" onClick={closeDrawer} />
           <aside className="flex h-full w-full max-w-[580px] flex-col bg-white shadow-2xl">
             <div className="flex justify-end px-6 pt-6"><button type="button" onClick={closeDrawer} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Close position panel"><FiX className="h-5 w-5" /></button></div>
-            <div className="flex-1 overflow-y-auto px-10 pb-8 pt-3 max-[520px]:px-6">
+            <div className="flex-1 overflow-y-auto px-10 pb-28 pt-3 max-[520px]:px-6">
               <h2 className="text-base font-medium text-[#111528]">Add Position</h2>
               <p className="mt-3 text-sm text-[#111528]">Add the offices people will vote for</p>
-              <label htmlFor="position-name" className="mt-5 block text-sm font-medium text-[#111528]">Position Name<span className="text-rose-500">*</span></label>
-              <Input id="position-name" value={positionTitle} onChange={(event) => setPositionTitle(event.target.value)} placeholder="e.g., President" className="mt-2 h-12 border-[#e3e3e3]" autoFocus />
-              <div className="mt-4 flex items-center justify-between gap-3"><Button className="h-9 rounded-lg bg-[#003dff] px-4 text-sm text-white hover:bg-[#0034d9]" onClick={savePosition}>Save Position</Button><button type="button" onClick={deletePosition} className="flex items-center gap-2 px-2 py-2 text-sm text-slate-500 hover:text-rose-600"><FiTrash2 className="h-4 w-4" />Delete</button></div>
 
-              <div className="mt-6"><h3 className="text-base font-medium text-[#111528]">Add Candidates</h3><p className="mt-3 text-sm text-[#111528]">Add the people running for this position</p></div>
-              <label htmlFor="candidate-name" className="mt-5 block text-sm font-medium text-[#111528]">Candidate Name<span className="text-rose-500">*</span></label>
-              <Input id="candidate-name" value={candidateName} onChange={(event) => setCandidateName(event.target.value)} placeholder="e.g., Bola Ahmed Tinubu" className="mt-2 h-12 border-[#e3e3e3]" />
-              <p className="mt-4 text-sm font-medium text-[#111528]">Candidate photo <span className="font-normal">(optional)</span></p>
-              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-              {draftPhoto ? <div className="mt-3 flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-2"><img src={draftPhoto.url} alt="Selected candidate" className="h-9 w-9 rounded object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-slate-700">{draftPhoto.name}</p><p className="mt-1 text-xs text-slate-500">{draftPhoto.size}</p></div><button type="button" onClick={resetCandidate} className="text-xs font-medium text-slate-700 hover:text-rose-600">Remove</button></div> : null}
-              <Button type="button" variant="outline" className="mt-3 h-9 gap-2 border-slate-300 px-3 text-sm text-[#111528]" onClick={() => photoInputRef.current?.click()}><FiUpload className="h-4 w-4" />{draftPhoto ? 'Upload Image' : 'Upload File'}</Button>
-              <p className="mt-2 text-xs text-slate-500">*Square photos look best. Max size 5MB.*</p>
-              <div className="mt-4 flex items-center justify-between gap-3"><Button className="h-9 rounded-lg bg-[#003dff] px-4 text-sm text-white hover:bg-[#0034d9]" onClick={saveCandidate}>Save Candidate</Button><button type="button" onClick={resetCandidate} className="flex items-center gap-2 px-2 py-2 text-sm text-slate-500 hover:text-rose-600"><FiTrash2 className="h-4 w-4" />Delete</button></div>
-              <Button variant="secondary" className="mt-5 h-9 gap-2 rounded-lg bg-[#eef2ff] px-4 text-sm text-[#3758f9] hover:bg-[#e3e9ff]" onClick={resetCandidate}>Add another candidate <FiPlus className="h-4 w-4" /></Button>
-              {editingPositionId && <div className="mt-8 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500"><FiFileText className="mr-2 inline h-4 w-4" />Candidates you save will appear on the ballot.</div>}
+              {positions.length > 0 && <div className="mt-5"><label htmlFor="position-picker" className="block text-sm font-medium text-[#111528]">Position</label><select id="position-picker" value={editingPositionId ?? 'new'} onChange={handlePositionChange} className="mt-2 h-12 w-full rounded-lg border border-[#e3e3e3] bg-white px-3 text-sm text-[#111528] outline-none focus:border-[#003dff] focus:ring-3 focus:ring-[#003dff]/10"><option value="new">Add another position</option>{positions.map((position) => <option key={position.id} value={position.id}>{position.title}</option>)}</select></div>}
+
+              {positionTitleEditing ? (
+                <>
+                  <label htmlFor="position-name" className="mt-5 block text-sm font-medium text-[#111528]">Position Name<span className="text-rose-500">*</span></label>
+                  <Input id="position-name" value={positionTitle} onChange={(event) => setPositionTitle(event.target.value)} placeholder="e.g., President" className="mt-2 h-12 border-[#e3e3e3]" autoFocus />
+                  <div className="mt-4 flex justify-end"><Button className="h-9 rounded-lg bg-[#003dff] px-4 text-sm text-white hover:bg-[#0034d9]" onClick={savePosition}>Save Position</Button></div>
+                </>
+              ) : activePosition ? (
+                <div className="mt-5 rounded-xl border border-[#dbe3ff] bg-[#f7f8ff] p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1"><p className="text-xs font-medium uppercase tracking-[0.12em] text-[#7181d8]">Position</p><p className="mt-1 truncate text-base font-semibold text-[#111528]">{activePosition.title}</p></div>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-[#003dff] hover:bg-white" onClick={() => setPositionTitleEditing(true)} aria-label={`Edit ${activePosition.title}`}><FiEdit2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-white hover:text-rose-600" onClick={() => deletePosition(activePosition.id)} aria-label={`Delete ${activePosition.title}`}><FiTrash2 className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {activePosition ? (
+                <>
+                  <div className="mt-6"><h3 className="text-base font-medium text-[#111528]">Add candidates</h3><p className="mt-3 text-sm text-[#111528]">Enter each candidate's first name, last name, and an optional photo.</p></div>
+                  <div className="mt-5 space-y-3">
+                    {candidateForms.map((form, index) => (
+                      <div key={form.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div><label htmlFor={`candidate-first-name-${form.id}`} className="block text-xs font-medium text-slate-600">First name<span className="text-rose-500">*</span></label><Input id={`candidate-first-name-${form.id}`} value={form.firstName} onChange={(event) => updateCandidateForm(form.id, 'firstName', event.target.value)} placeholder="Bola" className="mt-1.5 h-10 border-slate-200 text-sm" required /></div>
+                              <div><label htmlFor={`candidate-last-name-${form.id}`} className="block text-xs font-medium text-slate-600">Last name<span className="text-rose-500">*</span></label><Input id={`candidate-last-name-${form.id}`} value={form.lastName} onChange={(event) => updateCandidateForm(form.id, 'lastName', event.target.value)} placeholder="Tinubu" className="mt-1.5 h-10 border-slate-200 text-sm" required /></div>
+                            </div>
+                            <div className="mt-3 flex items-center gap-3">
+                              <input ref={(element) => { photoInputRefs.current[form.id] = element }} id={`candidate-photo-${form.id}`} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhotoChange(form.id, event)} />
+                              <Button type="button" variant="outline" className="h-8 gap-2 border-slate-300 px-3 text-xs text-slate-700" onClick={() => photoInputRefs.current[form.id]?.click()}><FiUpload className="h-3.5 w-3.5" />{form.photo ? 'Change image' : 'Upload image'}</Button>
+                              {form.photo && <img src={form.photo} alt={`${form.firstName} ${form.lastName}`} className="h-8 w-8 rounded-full object-cover" />}
+                              <span className="text-xs text-slate-400">Optional</span>
+                            </div>
+                          </div>
+                          <button type="button" onClick={() => deleteCandidateForm(form.id)} className="mt-5 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete candidate ${index + 1}`}><FiTrash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="mt-6 rounded-lg bg-slate-50 p-4 text-sm text-slate-500"><FiFileText className="mr-2 inline h-4 w-4" />Save the position above to add candidates.</div>
+              )}
             </div>
+
+            {activePosition && <div className="sticky bottom-0 border-t border-slate-100 bg-white px-10 py-4 shadow-[0_-8px_20px_-18px_rgba(15,23,42,0.45)] max-[520px]:px-6"><div className="grid gap-3 sm:grid-cols-2"><Button type="button" variant="secondary" className="h-10 gap-2 rounded-lg bg-[#eef2ff] px-3 text-sm text-[#3758f9] hover:bg-[#e3e9ff]" onClick={addCandidateForm}><FiPlus className="h-4 w-4" />Add another candidate</Button><Button type="button" variant="outline" className="h-10 gap-2 rounded-lg border-[#3758f9] px-3 text-sm text-[#003dff] hover:bg-[#eef2ff] hover:text-[#003dff]" onClick={startNewPosition}><FiPlus className="h-4 w-4" />Add another position</Button></div></div>}
           </aside>
         </div>
       )}
