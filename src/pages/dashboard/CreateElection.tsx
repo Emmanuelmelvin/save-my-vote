@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react'
-import { FiCheck, FiChevronDown } from 'react-icons/fi'
+import { FiCheck, FiChevronDown, FiMenu } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +20,10 @@ import { createElectionSteps, type CreateElectionStepId } from './CreateElection
 import Voters from './CreateElection/Voters'
 import useCreateElectionStore from '@/store/createElection'
 
+interface CreateElectionProps {
+  onOpenMenu?: () => void
+}
+
 function StepIndicator({ completed, active }: { completed: boolean; active: boolean }) {
   if (completed) {
     return (
@@ -32,7 +36,7 @@ function StepIndicator({ completed, active }: { completed: boolean; active: bool
   return <span className={`h-5 w-5 shrink-0 rounded-[4px] border ${active ? 'border-[#003dff] bg-[#efeff1]' : 'border-[#111528] bg-[#efeff1]'}`} />
 }
 
-const CreateElection: React.FC = () => {
+const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
   const { title } = useCreateElectionStore()
   const [activeStep, setActiveStep] = useState<CreateElectionStepId>('basic')
   const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => ({
@@ -70,8 +74,11 @@ const CreateElection: React.FC = () => {
 
   return (
     <div className="min-h-full bg-[#f8f8f8] text-[#111528]">
-      <header className="flex h-[72px] items-center border-b border-[#e3e3e3] bg-white px-8 max-[760px]:px-5">
+      <header className="flex h-[72px] items-center justify-between border-b border-[#e3e3e3] bg-white px-8 max-[760px]:px-5">
         <p className="font-['Manrope'] text-[16px] font-medium leading-6">{title || 'Senate Elections 2026'}</p>
+        <Button variant="ghost" size="icon" className="hidden max-[760px]:inline-flex" onClick={onOpenMenu} aria-label="Open menu">
+          <FiMenu size={20} />
+        </Button>
       </header>
 
       <div className="flex min-h-[calc(100vh-72px)] max-[760px]:flex-col">

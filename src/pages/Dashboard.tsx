@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
 
         <main className={activePage === 'create' ? 'flex-1 overflow-auto' : 'flex-1 overflow-auto p-8'}>
           {activePage === 'create' ? (
-            <CreateElection />
+            <CreateElection onOpenMenu={() => setOpen(true)} />
           ) : (
             <div className="mx-auto max-w-6xl">
               <>
