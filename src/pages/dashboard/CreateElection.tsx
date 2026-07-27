@@ -68,7 +68,7 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
     ballot: <Ballot onNext={handleNext} />,
     emails: <Emails onNext={handleNext} />,
     branding: <Branding onNext={handleNext} />,
-    preview: <Preview onNext={handleNext} />,
+    preview: <Preview onNext={handleNext} onEdit={(step) => setActiveStep(step)} />,
     launch: <Launch onNext={handleNext} />,
   }), [handleNext])
 
@@ -84,7 +84,7 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
       <div className="flex min-h-[calc(100vh-72px)] max-[760px]:flex-col">
         <aside className="w-[210px] shrink-0 border-r border-[#e3e3e3] px-4 pb-[10px] pt-7 max-[760px]:w-full max-[760px]:border-r-0 max-[760px]:px-5 max-[760px]:pb-0 max-[760px]:pt-5">
           <ul className="flex w-[178px] flex-col gap-2 max-[760px]:hidden">
-            {createElectionSteps.filter((step) => step.id !== 'preview').map((step) => (
+            {createElectionSteps.map((step) => (
               <li key={step.id} className={`flex h-11 w-[178px] cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors ${activeStep === step.id ? 'bg-white text-[#003dff]' : 'text-[#111528] hover:bg-white/70'}`} onClick={() => setActiveStep(step.id)}>
                 <StepIndicator completed={completed[step.id]} active={activeStep === step.id} />
                 <step.icon className={`h-5 w-5 shrink-0 ${activeStep === step.id ? 'text-[#003dff]' : 'text-[#111528]'}`} />

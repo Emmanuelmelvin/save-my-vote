@@ -53,9 +53,29 @@ interface BasicInformationProps {
   onNext?: () => void
 }
 
+const ONE_HOUR_MS = 60 * 60 * 1000
+
 const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
   const { title, description, startDate, endDate, setBasicInfo } = useCreateElectionStore()
-  const datesAreValid = Boolean(startDate && endDate && endDate > startDate)
+
+  const startDateError = startDate && startDate.getTime() <= Date.now() + ONE_HOUR_MS
+    ? 'Start date must be at least 1 hour ahead from now.'
+    : null
+
+  const endDateError = startDate && endDate && endDate.getTime() <= startDate.getTime() + ONE_HOUR_MS
+    ? 'End date must be at least 1 hour after the start date.'
+    : !startDate && endDate
+      ? 'Set a start date first.'
+      : null
+
+  const datesAreValid = Boolean(
+    startDate &&
+    endDate &&
+    endDate > startDate &&
+    startDate.getTime() > Date.now() + ONE_HOUR_MS &&
+    endDate.getTime() > startDate.getTime() + ONE_HOUR_MS
+  )
+
   const canProceed = title.trim().length > 0 && datesAreValid
 
   return (
@@ -93,7 +113,8 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
           </div>
         </div>
 
-        {startDate && endDate && endDate <= startDate && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">End date and time must be after the start date and time.</p>}
+        {startDateError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{startDateError}</p>}
+        {endDateError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{endDateError}</p>}
 
         <div className="flex justify-end border-t border-slate-100 pt-5">
           <Button className="h-11 rounded-lg bg-[#1050ff] px-6 font-medium text-white hover:bg-[#003fe6] disabled:cursor-not-allowed disabled:opacity-50" disabled={!canProceed} onClick={onNext}>Next</Button>
