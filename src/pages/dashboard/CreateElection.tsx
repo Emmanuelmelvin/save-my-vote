@@ -69,7 +69,7 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
     emails: <Emails onNext={handleNext} />,
     branding: <Branding onNext={handleNext} />,
     preview: <Preview onNext={handleNext} />,
-    launch: <Launch onNext={handleNext} onEdit={(step) => setActiveStep(step)} />,
+    launch: <Launch onEdit={(step) => setActiveStep(step)} />,
   }), [handleNext])
 
   return (

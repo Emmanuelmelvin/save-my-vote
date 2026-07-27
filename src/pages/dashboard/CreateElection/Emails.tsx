@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react'
 import { FiInfo, FiMail } from 'react-icons/fi'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -29,12 +28,6 @@ const defaultTemplates: EmailTemplate[] = [
     body: 'Hi %name%, this is a reminder that you have not voted in the election...',
   },
 ]
-
-const updateSchema = z.object({
-  fromName: z.string().max(100),
-  subject: z.string().min(1, 'Subject is required').max(200),
-  body: z.string().min(1, 'Body is required').max(2000),
-})
 
 const emailInfo: Record<string, { label: string; info: string }> = {
   invitation: {
