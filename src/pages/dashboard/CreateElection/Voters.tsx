@@ -124,6 +124,7 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
     setVoters([...voters, makeVoter({ name: name.trim(), email: email.trim() }, voters.length)])
     setName('')
     setEmail('')
+    setIsImporting(false)
     setIsAddOpen(false)
     setNotice('Voter was added successfully')
   }
