@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react'
 import { FiClipboard, FiEdit2, FiFileText, FiPlus, FiTrash2, FiUpload, FiX } from 'react-icons/fi'
 import { toast } from 'sonner'
 import { z } from 'zod'
-
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
