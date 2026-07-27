@@ -26,6 +26,7 @@ export type Position = {
 export type EmailTemplate = {
   id: string
   type: 'invitation' | 'reminder' | 'confirmation'
+  fromName: string
   subject: string
   body: string
 }
