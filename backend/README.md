@@ -39,11 +39,13 @@ Set `RESEND_API_KEY` and a `MAIL_FROM_ADDRESS` on a domain verified in Resend. V
 | | `logs/app.log` (everything at `LOG_LEVEL`+) and `logs/error.log` (errors only), JSON, rotated at 10 MB | `LOG_TO_FILES`, default on outside production |
 | | Sentry Logs (info and above, linked to the request's trace) | when `SENTRY_DSN` is set |
 | Errors | Sentry Issues: every 5xx and unhandled exception | when `SENTRY_DSN` is set |
-| Traces | Sentry Performance: HTTP, Nest handlers, SQL queries (`SENTRY_TRACES_SAMPLE_RATE`) | when `SENTRY_DSN` is set |
+| Traces | Sentry Performance: HTTP, Nest handlers, SQL queries (every request locally, 10% in production; `SENTRY_TRACES_SAMPLE_RATE` overrides) | when `SENTRY_DSN` is set |
 | Metrics | Sentry Metrics (see below) | when `SENTRY_DSN` is set |
 | Cron | Sentry Crons monitor `voter-invitations` (alerts if the invitation job stops or fails) | when `SENTRY_DSN` is set |
 
-**Setting up Sentry:** create a project in Sentry (platform: NestJS), copy its DSN from *Project Settings → Client Keys*, and set `SENTRY_DSN` (plus `SENTRY_ENVIRONMENT`, e.g. `development` / `production`, and optionally `SENTRY_RELEASE`). No other account access is needed.
+**Setting up Sentry:** the Sentry project is `savemyvote-server` (platform: NestJS). Copy its DSN from *Project Settings → Client Keys*, and set `SENTRY_DSN` (plus `SENTRY_ENVIRONMENT`, e.g. `development` / `production`, and optionally `SENTRY_RELEASE`). No other account access is needed.
+
+The production image and `npm run start:prod` run Node with `--enable-source-maps`, so Sentry stack traces point at the `.ts` source.
 
 Personal data stays on the server: request bodies, headers, cookies, query strings, SQL parameters and stack-frame variables are not sent to Sentry, and metric labels never contain emails or codes.
 
