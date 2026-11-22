@@ -1,0 +1,119 @@
+# Lint, type-check, test and build the API and the web app.
+# Runs on every push (any branch), every pull request, merge-queue merges, and on demand.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the run in progress, except on main,
+# where every commit gets a full run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # Same major version as the backend Dockerfile (node:24-alpine).
+  NODE_VERSION: '24'
+
+jobs:
+  backend:
+    name: Backend · format, lint, build, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Prettier
+        run: npm run format:check
+      - name: Lint (oxlint, type-aware)
+        run: npm run lint
+      - name: Build (type-checks with tsc)
+        run: npm run build
+      - name: Unit tests
+        run: npm test
+
+  backend-e2e:
+    name: Backend · e2e (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    # Matches docker-compose.yml; vitest.config.e2e.ts connects to localhost:5433 and
+    # creates the savemyvote_test database itself.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: savemyvote
+          POSTGRES_PASSWORD: savemyvote
+          POSTGRES_DB: savemyvote
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U savemyvote -d savemyvote"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: E2E tests
+        run: npm run test:e2e
+
+  backend-docker:
+    name: Backend · Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image (not pushed)
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          push: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  frontend:
+    name: Frontend · lint, type-check, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint (ESLint)
+        run: npm run lint
+      # tsc -b, then vite build. Without SENTRY_AUTH_TOKEN the Sentry plugin is off,
+      # so no release is created and no source maps are uploaded from CI.
+      - name: Build
+        run: npm run build
