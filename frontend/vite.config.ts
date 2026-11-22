@@ -14,4 +14,13 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  server: {
+    // In development the API is reached through Vite, so the auth cookie is first-party.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000',
+        changeOrigin: false,
+      },
+    },
+  },
 })
