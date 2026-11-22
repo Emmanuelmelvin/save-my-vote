@@ -1,19 +1,106 @@
 import React, { useState } from 'react'
-import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle } from 'react-icons/fi'
+import { useQueryClient } from '@tanstack/react-query'
+import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle, FiLogOut } from 'react-icons/fi'
+import { useLocation } from 'wouter'
+import { toast } from 'sonner'
 import logo from '@/assets/image.png'
 import CreateElection from '@/pages/dashboard/CreateElection'
+import DashboardHome from '@/pages/dashboard/Overview'
+import ElectionManage from '@/pages/dashboard/ElectionManage'
+import HelpCenter from '@/pages/dashboard/HelpCenter'
+import Results from '@/pages/dashboard/Results'
 import { Button } from '@/components/ui/button'
-import { FilterPill, BallotSvg } from './dashboard/shared'
+import { queryKeys, useLogout, useSession } from '@/lib/api/hooks'
+import { api } from '@/lib/api/services'
+import { ElectionDraftMapper } from '@/lib/election-draft'
+import { errorMessage } from '@/lib/format'
+import useCreateElectionStore from '@/store/createElection'
+
+type Page = 'dashboard' | 'create' | 'manage' | 'results' | 'help'
+
+const PAGE_TITLES: Record<Page, string> = {
+  dashboard: 'Dashboard',
+  create: 'Create Election',
+  manage: 'Manage Election',
+  results: 'Results',
+  help: 'Help Center',
+}
+
+const NavItem: React.FC<{ icon: React.ReactNode; children: React.ReactNode; active?: boolean; onClick?: () => void }> = ({ icon, children, active, onClick }) => (
+  <li onClick={onClick} className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${active ? 'text-blue-600 bg-slate-50' : 'text-slate-700 hover:bg-slate-50'}`}>
+    <span className="text-lg">{icon}</span>
+    <span>{children}</span>
+  </li>
+)
+
+const UserCard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
+  const { data: user } = useSession()
+  if (!user) return null
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white flex items-center justify-center font-medium">
+        {user.fullName.slice(0, 1).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{user.fullName}</div>
+        <div className="truncate text-xs text-slate-400">{user.organizationName ?? user.email}</div>
+      </div>
+      <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Log out" title="Log out">
+        <FiLogOut />
+      </Button>
+    </div>
+  )
+}
 
 const Dashboard: React.FC = () => {
   const [open, setOpen] = useState(false)
-  const [activePage, setActivePage] = useState<'dashboard' | 'create' | 'results' | 'help'>('dashboard')
+  const [activePage, setActivePage] = useState<Page>('dashboard')
+  const [selectedElectionId, setSelectedElectionId] = useState<string | null>(null)
+  const [, setLocation] = useLocation()
+  const client = useQueryClient()
+  const logout = useLogout()
+  const { reset, hydrate } = useCreateElectionStore()
 
-  const NavItem: React.FC<{ icon: React.ReactNode; children: React.ReactNode; active?: boolean; onClick?: () => void }> = ({ icon, children, active, onClick }) => (
-    <li onClick={onClick} className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${active ? 'text-blue-600 bg-slate-50' : 'text-slate-700 hover:bg-slate-50'}`}>
-      <span className="text-lg">{icon}</span>
-      <span>{children}</span>
-    </li>
+  const go = (page: Page, electionId: string | null = selectedElectionId) => {
+    setSelectedElectionId(electionId)
+    setActivePage(page)
+    setOpen(false)
+  }
+
+  const startNewElection = () => {
+    reset()
+    go('create', null)
+  }
+
+  /** Opens a saved draft in the wizard. */
+  const editDraft = async (id: string) => {
+    try {
+      const [detail, voters] = await Promise.all([
+        client.fetchQuery({ queryKey: queryKeys.election(id), queryFn: () => api.elections.get(id) }),
+        client.fetchQuery({ queryKey: queryKeys.voters(id), queryFn: () => api.voters.listAll(id) }),
+      ])
+      hydrate(ElectionDraftMapper.fromApi(detail, voters))
+      go('create', id)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  const handleLogout = () =>
+    logout.mutate(undefined, {
+      onSettled: () => {
+        reset()
+        setLocation('/login')
+      },
+    })
+
+  const navItems = (
+    <ul className="space-y-2">
+      <NavItem icon={<FiHome />} active={activePage === 'dashboard' || activePage === 'manage'} onClick={() => go('dashboard', null)}>Dashboard</NavItem>
+      <NavItem icon={<FiPlus />} active={activePage === 'create'} onClick={startNewElection}>Create Election</NavItem>
+      <NavItem icon={<FiBarChart2 />} active={activePage === 'results'} onClick={() => go('results')}>Results</NavItem>
+      <NavItem icon={<FiHelpCircle />} active={activePage === 'help'} onClick={() => go('help')}>Help Center</NavItem>
+    </ul>
   )
 
   return (
@@ -23,22 +110,9 @@ const Dashboard: React.FC = () => {
         <div className="mb-8">
           <img src={logo} alt="logo" className="w-28 h-auto" />
         </div>
-        <nav className="flex-1">
-          <ul className="space-y-2">
-            <NavItem icon={<FiHome />} active={activePage === 'dashboard'} onClick={() => setActivePage('dashboard')}>Dashboard</NavItem>
-            <NavItem icon={<FiPlus />} active={activePage === 'create'} onClick={() => setActivePage('create')}>Create Election</NavItem>
-            <NavItem icon={<FiBarChart2 />} active={activePage === 'results'} onClick={() => setActivePage('results')}>Results</NavItem>
-            <NavItem icon={<FiHelpCircle />} active={activePage === 'help'} onClick={() => setActivePage('help')}>Help Center</NavItem>
-          </ul>
-        </nav>
+        <nav className="flex-1">{navItems}</nav>
         <div className="mt-6 pt-6 border-t border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-medium">J</div>
-            <div>
-              <div className="font-medium">Jane Doe</div>
-              <div className="text-xs text-slate-400">Association of Com...</div>
-            </div>
-          </div>
+          <UserCard onLogout={handleLogout} />
         </div>
       </aside>
 
@@ -47,7 +121,7 @@ const Dashboard: React.FC = () => {
         {activePage !== 'create' && (
           <header className="flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:hidden">
             <img src={logo} alt="logo" className="h-8 w-auto" />
-            <h1 className="flex-1 px-4 text-center text-lg font-medium">Dashboard</h1>
+            <h1 className="flex-1 px-4 text-center text-lg font-medium">{PAGE_TITLES[activePage]}</h1>
             <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="Open menu">
               <FiMenu size={20} />
             </Button>
@@ -57,7 +131,7 @@ const Dashboard: React.FC = () => {
         {/* Desktop topbar */}
         {activePage !== 'create' && (
           <header className="hidden items-center justify-between border-b border-slate-100 bg-white px-6 py-5 md:flex">
-            <h1 className="text-lg font-medium">Dashboard</h1>
+            <h1 className="text-lg font-medium">{PAGE_TITLES[activePage]}</h1>
             <div />
           </header>
         )}
@@ -67,56 +141,38 @@ const Dashboard: React.FC = () => {
           <>
             <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setOpen(false)} />
             <aside className="fixed right-0 top-0 h-full w-64 bg-white z-50 p-6 shadow-lg">
-                <div className="flex items-center justify-end mb-6">
-                  <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close menu"><FiX size={20} /></Button>
-                </div>
-              <nav>
-                <ul className="space-y-2">
-                  <NavItem icon={<FiHome />} onClick={() => { setOpen(false); setActivePage('dashboard') }} active={activePage === 'dashboard'}>Dashboard</NavItem>
-                  <NavItem icon={<FiPlus />} onClick={() => { setOpen(false); setActivePage('create') }} active={activePage === 'create'}>Create Election</NavItem>
-                  <NavItem icon={<FiBarChart2 />} onClick={() => { setOpen(false); setActivePage('results') }} active={activePage === 'results'}>Results</NavItem>
-                  <NavItem icon={<FiHelpCircle />} onClick={() => { setOpen(false); setActivePage('help') }} active={activePage === 'help'}>Help Center</NavItem>
-                </ul>
-              </nav>
+              <div className="flex items-center justify-end mb-6">
+                <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close menu"><FiX size={20} /></Button>
+              </div>
+              <nav>{navItems}</nav>
               <div className="mt-6 pt-6 border-t border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-medium">J</div>
-                  <div>
-                    <div className="font-medium">Jane Doe</div>
-                    <div className="text-xs text-slate-400">Association of Com...</div>
-                  </div>
-                </div>
+                <UserCard onLogout={handleLogout} />
               </div>
             </aside>
           </>
         )}
 
-        <main className={activePage === 'create' ? 'flex-1 overflow-auto' : 'flex-1 overflow-auto p-8'}>
+        <main className={activePage === 'create' ? 'flex-1 overflow-auto' : 'flex-1 overflow-auto p-8 max-[640px]:p-5'}>
           {activePage === 'create' ? (
-            <CreateElection onOpenMenu={() => setOpen(true)} />
+            <CreateElection
+              onOpenMenu={() => setOpen(true)}
+              onLaunched={(id) => go('manage', id)}
+            />
           ) : (
             <div className="mx-auto max-w-6xl">
-              <>
-                <section className="mb-6">
-                  <h2 className="text-sm font-semibold text-slate-700 mb-4">All Elections</h2>
-                  <div className="flex gap-3">
-                    <FilterPill active>All</FilterPill>
-                    <FilterPill>Active</FilterPill>
-                    <FilterPill>Upcoming</FilterPill>
-                    <FilterPill>Drafts</FilterPill>
-                    <FilterPill>Completed</FilterPill>
-                  </div>
-                </section>
-
-                <section className="bg-white rounded-lg p-16 mt-6 text-center border border-slate-100">
-                  <div className="flex flex-col items-center gap-5">
-                    <BallotSvg />
-                    <h3 className="text-lg font-semibold">You don’t have any elections created</h3>
-                    <p className="text-sm text-slate-400">Start by creating your first election</p>
-                    <Button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg" onClick={() => setActivePage('create')}>Create new Election</Button>
-                  </div>
-                </section>
-              </>
+              {activePage === 'dashboard' && (
+                <DashboardHome
+                  onCreate={startNewElection}
+                  onEdit={(id) => void editDraft(id)}
+                  onManage={(id) => go('manage', id)}
+                  onResults={(id) => go('results', id)}
+                />
+              )}
+              {activePage === 'manage' && selectedElectionId && (
+                <ElectionManage electionId={selectedElectionId} onBack={() => go('dashboard', null)} onResults={(id) => go('results', id)} />
+              )}
+              {activePage === 'results' && <Results electionId={selectedElectionId} onSelect={(id) => setSelectedElectionId(id)} />}
+              {activePage === 'help' && <HelpCenter />}
             </div>
           )}
         </main>
