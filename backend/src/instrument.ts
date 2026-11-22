@@ -5,6 +5,7 @@
  * With no SENTRY_DSN nothing is initialised and every Sentry call is a no-op.
  */
 import * as Sentry from '@sentry/nestjs';
+import { tracesSampleRate } from './observability/traces-sample-rate.js';
 
 try {
   process.loadEnvFile();
@@ -21,7 +22,7 @@ if (dsn) {
       process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
     release: process.env.SENTRY_RELEASE || undefined,
     // Share of requests traced end to end (HTTP -> Nest handler -> SQL queries).
-    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.2),
+    tracesSampleRate: tracesSampleRate(process.env),
     // A voting system handles passwords, one-time codes and reset tokens, so none of
     // the request/user data Sentry collects by default leaves the server.
     dataCollection: {

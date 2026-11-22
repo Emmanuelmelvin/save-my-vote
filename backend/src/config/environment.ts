@@ -161,11 +161,13 @@ export class EnvironmentVariables {
   @IsString()
   SENTRY_RELEASE?: string;
 
+  /** Unset: 1.0 outside production, 0.1 in production (see src/instrument.ts). */
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(1)
-  SENTRY_TRACES_SAMPLE_RATE = 0.2;
+  SENTRY_TRACES_SAMPLE_RATE?: number;
 
   // ---- Google OAuth (optional) ----
   @IsOptional()
