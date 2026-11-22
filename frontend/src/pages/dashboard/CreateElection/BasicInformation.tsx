@@ -57,10 +57,22 @@ interface BasicInformationProps {
 
 const ONE_HOUR_MS = 60 * 60 * 1000
 
+// The current time, refreshed every 30 seconds so the "1 hour ahead" check stays
+// accurate while the form is open (calling Date.now() during render isn't pure).
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = React.useState(() => Date.now())
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(timer)
+  }, [intervalMs])
+  return now
+}
+
 const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
   const { title, description, startDate, endDate, setBasicInfo } = useCreateElectionStore()
+  const now = useNow()
 
-  const startDateError = startDate && startDate.getTime() <= Date.now() + ONE_HOUR_MS
+  const startDateError = startDate && startDate.getTime() <= now + ONE_HOUR_MS
     ? 'Start date must be at least 1 hour ahead from now.'
     : null
 
@@ -74,7 +86,7 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
     startDate &&
     endDate &&
     endDate > startDate &&
-    startDate.getTime() > Date.now() + ONE_HOUR_MS &&
+    startDate.getTime() > now + ONE_HOUR_MS &&
     endDate.getTime() > startDate.getTime() + ONE_HOUR_MS
   )
 

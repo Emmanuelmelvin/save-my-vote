@@ -64,4 +64,5 @@ function Button({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- shadcn shares the variants with calendar.tsx
 export { Button, buttonVariants }

@@ -2,6 +2,7 @@
 import * as React from "react"
 import { FiClock } from "react-icons/fi"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 interface TimePickerInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -10,6 +11,18 @@ interface TimePickerInputProps
   setDate: (date: Date | null) => void
   onRightFocus?: () => void
   onLeftFocus?: () => void
+}
+
+// The two-digit text a picker shows for a date; "12hours" keeps whatever was typed.
+function formatPart(
+  date: Date | null,
+  picker: TimePickerInputProps["picker"],
+  current: string
+): string {
+  if (!date) return ""
+  if (picker === "hours") return String(date.getHours() % 12 || 12).padStart(2, "0")
+  if (picker === "minutes") return String(date.getMinutes()).padStart(2, "0")
+  return current
 }
 
 export const TimePickerInput = React.forwardRef<
@@ -29,23 +42,15 @@ export const TimePickerInput = React.forwardRef<
     },
     ref
   ) => {
-    const [value, setValue] = React.useState("")
+    const [value, setValue] = React.useState(() => formatPart(date, picker, ""))
 
-    React.useEffect(() => {
-      if (!date) {
-        setValue("")
-        return
-      }
-      const hours = date.getHours()
-      const minutes = date.getMinutes()
-
-      if (picker === "hours") {
-        const hours12 = hours % 12 || 12
-        setValue(String(hours12).padStart(2, "0"))
-      } else if (picker === "minutes") {
-        setValue(String(minutes).padStart(2, "0"))
-      }
-    }, [date, picker])
+    // Re-sync the text when the date or picker changes, during render rather than in an
+    // effect (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+    const [synced, setSynced] = React.useState({ date, picker })
+    if (synced.date !== date || synced.picker !== picker) {
+      setSynced({ date, picker })
+      setValue(formatPart(date, picker, value))
+    }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "ArrowRight") onRightFocus?.()
@@ -78,7 +83,10 @@ export const TimePickerInput = React.forwardRef<
       <Input
         ref={ref}
         id={id}
-        className="w-[48px] text-center font-mono text-sm focus:bg-accent focus:text-accent-foreground"
+        className={cn(
+          "w-[48px] text-center font-mono text-sm focus:bg-accent focus:text-accent-foreground",
+          className
+        )}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

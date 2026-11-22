@@ -22,7 +22,10 @@ describe('tracesSampleRate', () => {
 
   it('ignores an empty SENTRY_TRACES_SAMPLE_RATE', () => {
     expect(
-      tracesSampleRate({ NODE_ENV: 'production', SENTRY_TRACES_SAMPLE_RATE: ' ' }),
+      tracesSampleRate({
+        NODE_ENV: 'production',
+        SENTRY_TRACES_SAMPLE_RATE: ' ',
+      }),
     ).toBe(0.1);
   });
 });
