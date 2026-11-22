@@ -25,3 +25,23 @@ Point the dev proxy elsewhere with `VITE_API_PROXY_TARGET`. For a production bui
 | `/dashboard` | organisers (signed in) | elections list, create wizard, manage a launched election, results |
 | `/preview/:id` | organisers (signed in) | the ballot as voters see it; nothing is recorded |
 | `/vote/:id` | voters | sign in with email + one-time code, vote, see final results after closing |
+
+## Monitoring (Sentry)
+
+`src/instrument.ts` sets up Sentry (project `savemyvote-frontend`) when `VITE_SENTRY_DSN` is set:
+
+- **Errors:** uncaught errors and React rendering errors (via React 19's root error hooks).
+- **Tracing:** page loads, navigations and API calls. Requests to the API carry trace headers, so a page and the backend work it caused show up as one trace. Every page load is traced in dev, 10% in production builds (`VITE_SENTRY_TRACES_SAMPLE_RATE` overrides).
+- **Logs:** `console.warn` and `console.error` become Sentry Logs.
+- **Session Replay:** 10% of sessions plus every session with an error. All text and inputs are masked and media is blocked, so passwords and one-time codes are never recorded.
+- No user, cookie, header, body or query-string data is sent.
+
+**Production (Vercel / Netlify):** set these build environment variables:
+
+| Variable | Value |
+| --- | --- |
+| `VITE_SENTRY_DSN` | the `savemyvote-frontend` DSN (Sentry → Project Settings → Client Keys) |
+| `VITE_SENTRY_ENVIRONMENT` | `production` (defaults to the Vite mode, which is already `production` for `vite build`) |
+| `SENTRY_AUTH_TOKEN` | an organization auth token (Sentry → Settings → Auth Tokens). **Secret: never commit it.** |
+
+With `SENTRY_AUTH_TOKEN` set, `npm run build` creates a Sentry release named after the git commit and uploads source maps, then deletes the `.map` files from `dist/` so your source isn't served publicly. Without it, the build skips source maps entirely.
