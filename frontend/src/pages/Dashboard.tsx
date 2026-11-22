@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle, FiLogOut } from 'react-icons/fi'
+import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle, FiLogOut, FiMessageSquare } from 'react-icons/fi'
 import { useLocation } from 'wouter'
 import { toast } from 'sonner'
 import logo from '@/assets/image.png'
@@ -14,6 +14,7 @@ import { queryKeys, useLogout, useSession } from '@/lib/api/hooks'
 import { api } from '@/lib/api/services'
 import { ElectionDraftMapper } from '@/lib/election-draft'
 import { errorMessage } from '@/lib/format'
+import { openFeedback, resetUserJot, userJotEnabled, useUserJot } from '@/lib/userjot'
 import useCreateElectionStore from '@/store/createElection'
 
 type Page = 'dashboard' | 'create' | 'manage' | 'results' | 'help'
@@ -59,7 +60,9 @@ const Dashboard: React.FC = () => {
   const [, setLocation] = useLocation()
   const client = useQueryClient()
   const logout = useLogout()
+  const { data: user } = useSession()
   const { reset, hydrate } = useCreateElectionStore()
+  useUserJot(user)
 
   const go = (page: Page, electionId: string | null = selectedElectionId) => {
     setSelectedElectionId(electionId)
@@ -90,6 +93,7 @@ const Dashboard: React.FC = () => {
     logout.mutate(undefined, {
       onSettled: () => {
         reset()
+        resetUserJot()
         setLocation('/login')
       },
     })
@@ -100,6 +104,17 @@ const Dashboard: React.FC = () => {
       <NavItem icon={<FiPlus />} active={activePage === 'create'} onClick={startNewElection}>Create Election</NavItem>
       <NavItem icon={<FiBarChart2 />} active={activePage === 'results'} onClick={() => go('results')}>Results</NavItem>
       <NavItem icon={<FiHelpCircle />} active={activePage === 'help'} onClick={() => go('help')}>Help Center</NavItem>
+      {userJotEnabled && (
+        <NavItem
+          icon={<FiMessageSquare />}
+          onClick={() => {
+            setOpen(false)
+            openFeedback()
+          }}
+        >
+          Send Feedback
+        </NavItem>
+      )}
     </ul>
   )
 
