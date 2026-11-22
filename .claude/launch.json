@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "backend", "run", "start:prod"],
+      "env": { "PORT": "3001", "BACKEND_URL": "http://localhost:3001" },
+      "port": 3001
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "env": { "VITE_API_PROXY_TARGET": "http://localhost:3001" },
+      "port": 5173
+    }
+  ]
+}

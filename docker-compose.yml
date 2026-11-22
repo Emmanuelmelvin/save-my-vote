@@ -1,0 +1,43 @@
+# Local stack for SaveMyVote.
+#   Database only (run the API with `npm run start:dev`):  docker compose up -d db
+#   Database and API:                                       docker compose up -d --build
+# The API reads its settings (secrets, RESEND_API_KEY, SENTRY_DSN...) from backend/.env;
+# copy backend/.env.example first.
+
+name: savemyvote
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: savemyvote
+      POSTGRES_PASSWORD: savemyvote
+      POSTGRES_DB: savemyvote
+    ports:
+      - '5433:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U savemyvote -d savemyvote']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ''
+      DB_HOST: db
+      DB_PORT: '5432'
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
