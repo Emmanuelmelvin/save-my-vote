@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Link, useLocation } from 'wouter'
+import { toast } from 'sonner'
 import AuthLayout from '@/components/AuthLayout'
 import {
   Divider,
@@ -9,7 +11,9 @@ import {
   SocialButton,
   TextField,
 } from '@/components/AuthControls'
-import useAuthStore from '@/store/auth'
+import { ApiError } from '@/lib/api/client'
+import { api } from '@/lib/api/services'
+import { errorMessage } from '@/lib/format'
 
 const SignUp: React.FC = () => {
   const [, setLocation] = useLocation()
@@ -18,8 +22,27 @@ const SignUp: React.FC = () => {
   const [password, setPassword] = useState('')
   const [accountType, setAccountType] = useState<'institution' | 'organisation'>('organisation')
   const [organizationName, setOrganizationName] = useState('')
-  const setUser = useAuthStore((s) => s.setUser)
   const [agree, setAgree] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
+
+  const signUp = useMutation({
+    mutationFn: () =>
+      api.auth.signUp({
+        fullName: name.trim(),
+        email: email.trim(),
+        password,
+        organizationType: accountType,
+        organizationName: organizationName.trim() || undefined,
+      }),
+    onSuccess: () => setLocation(`/check-email?email=${encodeURIComponent(email.trim())}`),
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) {
+        setFieldErrors({ email: 'An account with this email already exists. Try logging in.' })
+        return
+      }
+      toast.error(errorMessage(error))
+    },
+  })
 
   return (
     <AuthLayout
@@ -30,8 +53,8 @@ const SignUp: React.FC = () => {
     >
       <div className="w-full max-w-[550px] space-y-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <SocialButton label="Sign up with Google" icon="google" onClick={() => setLocation('/login')} />
-          <SocialButton label="Sign up with Outlook" icon="microsoft" onClick={() => setLocation('/login')} />
+          <SocialButton label="Sign up with Google" icon="google" onClick={() => window.location.assign(api.auth.googleSignInUrl())} />
+          <SocialButton label="Sign up with Outlook" icon="microsoft" onClick={() => toast.info('Outlook sign-in is coming soon. Use Google or email for now.')} />
         </div>
 
         <Divider />
@@ -40,15 +63,19 @@ const SignUp: React.FC = () => {
           className="space-y-5"
           onSubmit={(event) => {
             event.preventDefault()
-            if (!agree) return
-            setUser({ id: 'u_new', name, email, role: 'voter', verified: false })
-            setLocation('/login')
+            if (!agree || signUp.isPending) return
+            if (password.length < 8) {
+              setFieldErrors({ password: 'Use at least 8 characters.' })
+              return
+            }
+            setFieldErrors({})
+            signUp.mutate()
           }}
         >
           <div className="grid grid-cols-1 gap-4">
             <TextField id="signup-name" label="Full name" required placeholder="Enter your full name" value={name} onChange={setName} autoComplete="name" />
-            <TextField id="signup-email" label="Email" required type="email" placeholder="Enter your Email" value={email} onChange={setEmail} autoComplete="email" />
-            <PasswordField id="signup-password" label="Password" required value={password} onChange={setPassword} />
+            <TextField id="signup-email" label="Email" required type="email" placeholder="Enter your Email" value={email} onChange={setEmail} autoComplete="email" error={fieldErrors.email} />
+            <PasswordField id="signup-password" label="Password" required value={password} onChange={setPassword} error={fieldErrors.password} />
             <RadioGroup label="Do you represent an institution or organisation?" value={accountType} onChange={setAccountType} />
             <TextField
               id="signup-organisation"
@@ -65,7 +92,9 @@ const SignUp: React.FC = () => {
             <label htmlFor="agree" className="text-[14px] leading-6 text-[#6b7280]">By creating an account you agree to our <a href="/terms" className="font-medium text-[#1050ff]">Terms</a> and <a href="/privacy" className="font-medium text-[#1050ff]">Privacy Policy</a>.</label>
           </div>
 
-          <PrimaryButton type="submit" disabled={!agree}>Sign up</PrimaryButton>
+          <PrimaryButton type="submit" disabled={!agree || signUp.isPending}>
+            {signUp.isPending ? 'Creating your account…' : 'Sign up'}
+          </PrimaryButton>
         </form>
       </div>
     </AuthLayout>
