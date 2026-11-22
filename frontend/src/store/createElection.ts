@@ -37,7 +37,11 @@ export type BrandingData = {
   heroImage: string | null
 }
 
-type CreateElectionState = {
+/** Everything the create-election wizard edits; saved to the API step by step. */
+export type ElectionDraft = {
+  /** Set once the draft exists on the server (after the first step is saved). */
+  electionId: string | null
+
   // Basic Information
   title: string
   description: string
@@ -55,33 +59,40 @@ type CreateElectionState = {
 
   // Branding
   branding: BrandingData
+}
 
-  // Actions
+type CreateElectionState = ElectionDraft & {
+  setElectionId: (id: string) => void
   setBasicInfo: (data: { title: string; description: string; startDate: Date | null; endDate: Date | null }) => void
   setVoters: (voters: Voter[]) => void
   setPositions: (positions: Position[]) => void
   setEmailTemplates: (templates: EmailTemplate[]) => void
   setBranding: (branding: BrandingData) => void
+  /** Loads an existing draft (from the API) into the wizard. */
+  hydrate: (draft: ElectionDraft) => void
   reset: () => void
 }
 
-const initialState = {
+const initialState: ElectionDraft = {
+  electionId: null,
   title: '',
   description: '',
-  startDate: null as Date | null,
-  endDate: null as Date | null,
-  voters: [] as Voter[],
-  positions: [] as Position[],
-  emailTemplates: [] as EmailTemplate[],
+  startDate: null,
+  endDate: null,
+  voters: [],
+  positions: [],
+  emailTemplates: [],
   branding: {
-    logo: null as string | null,
+    logo: null,
     primaryColor: '#1050ff',
-    heroImage: null as string | null,
+    heroImage: null,
   },
 }
 
 const useCreateElectionStore = create<CreateElectionState>((set) => ({
   ...initialState,
+
+  setElectionId: (electionId) => set({ electionId }),
 
   setBasicInfo: (data) =>
     set({
@@ -98,6 +109,8 @@ const useCreateElectionStore = create<CreateElectionState>((set) => ({
   setEmailTemplates: (templates) => set({ emailTemplates: templates }),
 
   setBranding: (branding) => set({ branding }),
+
+  hydrate: (draft) => set({ ...draft }),
 
   reset: () => set({ ...initialState }),
 }))

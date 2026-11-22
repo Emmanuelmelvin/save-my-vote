@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import spreadsheetAsset from '@/assets/voter-template.png'
 import useCreateElectionStore from '@/store/createElection'
 import type { Voter } from '@/store/createElection'
+import { ElectionDraftSync } from '@/lib/election-draft'
+import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface VotersProps {
   onNext?: () => void
@@ -70,6 +72,12 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
   const [importRows, setImportRows] = useState<ImportRow[]>([])
   const [search, setSearch] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Makes the server's voter roll match this list, then keeps the saved ids.
+  const save = useSaveStep(async (draft) => {
+    const roll = await ElectionDraftSync.saveVoters(requireElectionId(draft), draft.voters)
+    setVoters(roll.map((voter) => ({ id: voter.id, name: voter.fullName ?? '', email: voter.email })))
+  }, 'Voter list saved')
 
   const filteredVoters = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -174,7 +182,7 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
           <div className="relative mb-7 max-w-[600px]"><FiSearch className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search..." className="h-12 rounded-full border-slate-200 bg-white pl-12 text-base" /></div>
           <div className="hidden overflow-x-auto rounded-t-lg bg-white sm:block"><table className="w-full min-w-[430px] text-left"><thead className="bg-[#e5e7eb] text-sm font-medium text-[#111928]"><tr><th className="rounded-tl-lg px-4 py-3">NAME</th><th className="px-4 py-3">EMAIL</th><th className="rounded-tr-lg px-4 py-3">Actions</th></tr></thead><tbody className="divide-y divide-[#e3e3e3]">{filteredVoters.map((voter) => <tr key={voter.id} className="text-sm text-[#111528]"><td className="px-4 py-3">{voter.name}</td><td className="px-4 py-3">{voter.email}</td><td className="px-4 py-3"><button type="button" onClick={() => removeVoter(voter.id)} className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-rose-600" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></td></tr>)}</tbody></table><p className="border-t border-[#e3e3e3] px-4 py-3 text-sm text-[#111528]">{voters.length} voter{voters.length === 1 ? '' : 's'}</p></div>
           <div className="space-y-3 sm:hidden">{filteredVoters.map((voter) => <div key={voter.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4"><div><p className="font-medium text-slate-800">{voter.name}</p><p className="mt-1 text-sm text-slate-500">{voter.email}</p></div><button type="button" onClick={() => removeVoter(voter.id)} className="text-rose-500" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></div>)}{filteredVoters.length === 0 && <p className="rounded-lg bg-white p-6 text-center text-sm text-slate-500">No voters match your search.</p>}</div>
-          <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end"><Button variant="ghost" className="h-11 px-5 text-base text-[#111528] hover:bg-white" onClick={() => setShowList(false)}>Go Back</Button><Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={onNext} disabled={voters.length === 0}>Save and continue</Button></div>
+          <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end"><Button variant="ghost" className="h-11 px-5 text-base text-[#111528] hover:bg-white" onClick={() => setShowList(false)}>Go Back</Button><Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={() => save.mutate(undefined, { onSuccess: onNext })} disabled={voters.length === 0 || save.isPending}>{save.isPending ? 'Saving…' : 'Save and continue'}</Button></div>
         </div>
       )}
 

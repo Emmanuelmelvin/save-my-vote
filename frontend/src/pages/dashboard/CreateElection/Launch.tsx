@@ -3,19 +3,44 @@ import { FiCalendar, FiEdit2, FiInfo } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { ApiError } from '@/lib/api/client'
+import { invalidateElection } from '@/lib/api/hooks'
+import { api } from '@/lib/api/services'
+import { errorMessage } from '@/lib/format'
 import useCreateElectionStore from '@/store/createElection'
 import type { CreateElectionStepId } from '@/pages/dashboard/CreateElection/step-data'
 
 interface LaunchProps {
   onEdit?: (step: CreateElectionStepId) => void
+  onLaunched?: (electionId: string) => void
 }
 
 const tabs = ['Confirm Details', 'Confirm Ballot', 'Terms', 'Launch'] as const
 
-const Launch: React.FC<LaunchProps> = ({ onEdit }) => {
-  const { title, description, startDate, endDate, positions } = useCreateElectionStore()
+const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
+  const { electionId, title, description, startDate, endDate, positions, voters, reset } = useCreateElectionStore()
   const [activeTab, setActiveTab] = useState<string>(tabs[0])
   const [agreed, setAgreed] = useState(false)
+  const [problems, setProblems] = useState<string[]>([])
+  const client = useQueryClient()
+
+  const launch = useMutation({
+    mutationFn: () => api.elections.launch(electionId as string),
+    onSuccess: async (election) => {
+      setProblems([])
+      await invalidateElection(client, election.id)
+      toast.success('Election launched! Invitations go out automatically before voting opens.')
+      reset()
+      onLaunched?.(election.id)
+    },
+    onError: (error) => {
+      // The API lists everything that's missing at once.
+      if (error instanceof ApiError && error.errors.length) setProblems(error.errors)
+      else toast.error(errorMessage(error))
+    },
+  })
 
   const formatDate = (date: Date | null) =>
     date
@@ -221,7 +246,7 @@ const Launch: React.FC<LaunchProps> = ({ onEdit }) => {
                 <p className="text-base font-bold text-[#111528]">After launch, <span className="font-bold">you can</span>:</p>
                 <div className="mt-2 rounded-2xl border border-[#E3E3E3] bg-[#F3F4F6] p-6">
                   <ul className="space-y-3 text-base leading-6 text-[#272935]">
-                    <li>- Add, edit, or remove voters</li>
+                    <li>- Add or remove voters who haven't voted yet</li>
                     <li>- Extend the end date</li>
                     <li>- Close the election</li>
                   </ul>
@@ -249,6 +274,38 @@ const Launch: React.FC<LaunchProps> = ({ onEdit }) => {
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4.16666 10H15.8333M10 4.16669L15.8333 10L10 15.8334" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
+            </Button>
+          </div>
+        )}
+
+        {activeTab === 'Launch' && (
+          <div className="flex flex-col items-end gap-6 px-10 pb-10 pt-6 max-[560px]:px-6">
+            <div className="w-full rounded-2xl border border-[#E3E3E3] bg-[#F3F4F6] p-6 text-base leading-7 text-[#272935]">
+              <p><strong>{title || 'Untitled election'}</strong></p>
+              <p>{positions.length} position{positions.length === 1 ? '' : 's'} · {voters.length} voter{voters.length === 1 ? '' : 's'}</p>
+              <p>Voting opens {formatDate(startDate)} at {formatTime(startDate)} and closes {formatDate(endDate)} at {formatTime(endDate)}.</p>
+              <p className="mt-3 text-sm text-[#5A5F73]">Each voter is emailed a one-time code shortly before voting opens.</p>
+            </div>
+
+            {!electionId && (
+              <p className="w-full rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Save the Basic Info step before launching.</p>
+            )}
+
+            {problems.length > 0 && (
+              <div className="w-full rounded-lg border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+                <p className="font-medium">Fix these before launching:</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {problems.map((problem) => <li key={problem}>{problem}</li>)}
+                </ul>
+              </div>
+            )}
+
+            <Button
+              className="h-12 gap-2 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!electionId || !agreed || launch.isPending}
+              onClick={() => launch.mutate()}
+            >
+              {launch.isPending ? 'Launching…' : 'Launch election'}
             </Button>
           </div>
         )}

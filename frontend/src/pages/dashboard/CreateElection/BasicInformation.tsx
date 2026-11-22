@@ -9,7 +9,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
+import { ElectionDraftSync } from '@/lib/election-draft'
 import useCreateElectionStore from '@/store/createElection'
+import { useSaveStep } from './useSaveStep'
 
 interface DateFieldProps {
   label: string
@@ -78,6 +80,12 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
 
   const canProceed = title.trim().length > 0 && datesAreValid
 
+  // First save creates the draft on the server; later saves update it.
+  const save = useSaveStep(async (draft) => {
+    const id = await ElectionDraftSync.saveBasics(draft)
+    useCreateElectionStore.getState().setElectionId(id)
+  })
+
   return (
     <Card className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-7 flex items-center gap-3">
@@ -117,7 +125,7 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
         {endDateError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{endDateError}</p>}
 
         <div className="flex justify-end border-t border-slate-100 pt-5">
-          <Button className="h-11 rounded-lg bg-[#1050ff] px-6 font-medium text-white hover:bg-[#003fe6] disabled:cursor-not-allowed disabled:opacity-50" disabled={!canProceed} onClick={onNext}>Next</Button>
+          <Button className="h-11 rounded-lg bg-[#1050ff] px-6 font-medium text-white hover:bg-[#003fe6] disabled:cursor-not-allowed disabled:opacity-50" disabled={!canProceed || save.isPending} onClick={() => save.mutate(undefined, { onSuccess: onNext })}>{save.isPending ? 'Saving…' : 'Next'}</Button>
         </div>
       </div>
     </Card>

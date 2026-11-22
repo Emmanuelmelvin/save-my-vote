@@ -22,6 +22,7 @@ import useCreateElectionStore from '@/store/createElection'
 
 interface CreateElectionProps {
   onOpenMenu?: () => void
+  onLaunched?: (electionId: string) => void
 }
 
 function StepIndicator({ completed, active }: { completed: boolean; active: boolean }) {
@@ -36,7 +37,7 @@ function StepIndicator({ completed, active }: { completed: boolean; active: bool
   return <span className={`h-5 w-5 shrink-0 rounded-[4px] border ${active ? 'border-[#003dff] bg-[#efeff1]' : 'border-[#111528] bg-[#efeff1]'}`} />
 }
 
-const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
+const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu, onLaunched }) => {
   const { title } = useCreateElectionStore()
   const [activeStep, setActiveStep] = useState<CreateElectionStepId>('basic')
   const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => ({
@@ -69,8 +70,8 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu }) => {
     emails: <Emails onNext={handleNext} />,
     branding: <Branding onNext={handleNext} />,
     preview: <Preview onNext={handleNext} />,
-    launch: <Launch onEdit={(step) => setActiveStep(step)} />,
-  }), [handleNext])
+    launch: <Launch onEdit={(step) => setActiveStep(step)} onLaunched={onLaunched} />,
+  }), [handleNext, onLaunched])
 
   return (
     <div className="min-h-full bg-[#f8f8f8] text-[#111528]">

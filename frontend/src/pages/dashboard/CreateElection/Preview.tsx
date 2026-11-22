@@ -1,25 +1,22 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { FiCopy } from 'react-icons/fi'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import useCreateElectionStore from '@/store/createElection'
 
 interface PreviewProps {
   onNext?: () => void
 }
 
 const Preview: React.FC<PreviewProps> = ({ onNext }) => {
-  const [, setCopied] = useState(false)
-
-  const previewUrl = 'https://saveourvotes.com/preview/Tw8Q6/T4h7xbS7Ef03jeCy'
+  const electionId = useCreateElectionStore((state) => state.electionId)
+  const previewUrl = electionId ? `${window.location.origin}/preview/${electionId}` : ''
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(previewUrl).then(() => {
-      setCopied(true)
-      toast.success('Link copied to clipboard')
-      setTimeout(() => setCopied(false), 2000)
-    })
+    if (!previewUrl) return
+    navigator.clipboard.writeText(previewUrl).then(() => toast.success('Link copied to clipboard'))
   }
 
   return (
@@ -36,30 +33,33 @@ const Preview: React.FC<PreviewProps> = ({ onNext }) => {
           Preview lets you see and test the election just like a voter — your test vote won't be counted.
         </p>
 
-        <div className="w-full rounded-2xl border border-[#E3E3E3] bg-[#F3F4F6] p-6">
-          <p className="text-sm leading-[22px] text-[#272935]">
-            This link can be shared with anyone, but it only works while the election is still being set up
-          </p>
+        {previewUrl ? (
+          <div className="w-full rounded-2xl border border-[#E3E3E3] bg-[#F3F4F6] p-6">
+            <p className="text-sm leading-[22px] text-[#272935]">
+              This link works for you (and anyone signed in to your account) while you set the election up.
+            </p>
 
-          <div className="mt-2 flex items-center rounded-lg bg-white">
-            <div className="flex-1 truncate px-3 py-2 text-sm leading-[22px] text-[#5A5F73]">
-              {previewUrl}
+            <div className="mt-2 flex items-center rounded-lg bg-white">
+              <div className="flex-1 truncate px-3 py-2 text-sm leading-[22px] text-[#5A5F73]">{previewUrl}</div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex h-[34px] w-[35px] shrink-0 items-center justify-center bg-[#E8EDFF]"
+                aria-label="Copy preview link"
+              >
+                <FiCopy className="h-5 w-5 text-[#5A5F73]" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex h-[34px] w-[35px] shrink-0 items-center justify-center bg-[#E8EDFF]"
-              aria-label="Copy preview link"
-            >
-              <FiCopy className="h-5 w-5 text-[#5A5F73]" />
-            </button>
           </div>
-        </div>
+        ) : (
+          <p className="w-full rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Save the Basic Info step first to get a preview link.</p>
+        )}
 
         <div className="flex items-center gap-3 self-end">
           <Button
             className="h-12 gap-2 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-            onClick={() => window.open(previewUrl, '_blank')}
+            disabled={!previewUrl}
+            onClick={() => window.open(previewUrl, '_blank', 'noopener')}
           >
             Preview Election
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

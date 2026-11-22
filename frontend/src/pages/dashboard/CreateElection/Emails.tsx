@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import useCreateElectionStore, { type EmailTemplate } from '@/store/createElection'
+import { ElectionDraftSync } from '@/lib/election-draft'
+import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface EmailsProps {
   onNext?: () => void
@@ -42,6 +44,12 @@ const emailInfo: Record<string, { label: string; info: string }> = {
 
 const Emails: React.FC<EmailsProps> = ({ onNext }) => {
   const { title, emailTemplates, setEmailTemplates } = useCreateElectionStore()
+
+  // Both emails are saved together. The voter's one-time code and the voting link
+  // are added to invitations and reminders automatically.
+  const save = useSaveStep((draft) =>
+    ElectionDraftSync.saveTemplates(requireElectionId(draft), draft.emailTemplates, draft.title),
+  )
 
   useEffect(() => {
     if (emailTemplates.length === 0) setEmailTemplates(defaultTemplates)
@@ -127,16 +135,22 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
 
               {/* Hint */}
               <p className="mt-3 text-base leading-6 text-[#111528]">
-                You can add the token <strong>%name%</strong> to the email body, it will automatically be replaced by the voter's name
+                You can add the token <strong>%name%</strong> to the email body, it will automatically be replaced by the voter's name.
+                Each voter's one-time code and the voting link are added below your message.
               </p>
 
               {/* Save button */}
               <div className="mt-3">
                 <Button
                   className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-                  onClick={() => index === 1 ? onNext?.() : toast.success('Email saved')}
+                  disabled={save.isPending}
+                  onClick={() =>
+                    save.mutate(undefined, {
+                      onSuccess: () => (index === 1 ? onNext?.() : toast.success('Email saved')),
+                    })
+                  }
                 >
-                  {index === 0 ? 'Save' : 'Save & Continue'}
+                  {save.isPending ? 'Saving…' : index === 0 ? 'Save' : 'Save & Continue'}
                 </Button>
               </div>
             </div>

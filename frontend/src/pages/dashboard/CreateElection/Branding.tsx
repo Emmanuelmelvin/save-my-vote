@@ -3,7 +3,10 @@ import { FiInfo } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { toast } from 'sonner'
 import useCreateElectionStore from '@/store/createElection'
+import { ElectionDraftSync } from '@/lib/election-draft'
+import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface BrandingProps {
   onNext?: () => void
@@ -19,10 +22,16 @@ const presetColors = [
 const Branding: React.FC<BrandingProps> = ({ onNext }) => {
   const { branding, setBranding } = useCreateElectionStore()
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const save = useSaveStep((draft) => ElectionDraftSync.saveBranding(requireElectionId(draft), draft.branding))
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('The logo must be 2 MB or smaller.')
+      event.target.value = ''
+      return
+    }
 
     const reader = new FileReader()
     reader.onload = () => setBranding({ ...branding, logo: String(reader.result ?? '') })
@@ -102,9 +111,10 @@ const Branding: React.FC<BrandingProps> = ({ onNext }) => {
         {/* Save & Continue */}
         <Button
           className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-          onClick={onNext}
+          disabled={save.isPending}
+          onClick={() => save.mutate(undefined, { onSuccess: onNext })}
         >
-          Save & Continue
+          {save.isPending ? 'Saving…' : 'Save & Continue'}
         </Button>
       </div>
     </Card>

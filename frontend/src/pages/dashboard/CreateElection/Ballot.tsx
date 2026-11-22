@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import useCreateElectionStore from '@/store/createElection'
 import type { Candidate, Position } from '@/store/createElection'
+import { ElectionDraftSync } from '@/lib/election-draft'
+import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface BallotProps {
   onNext?: () => void
@@ -56,6 +58,21 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   const [candidateForms, setCandidateForms] = useState<CandidateForm[]>([])
   const [expandedPositions, setExpandedPositions] = useState<Record<string, boolean>>({})
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  // Replaces the whole ballot on the server, then keeps the saved ids.
+  const save = useSaveStep(async (draft) => {
+    const saved = await ElectionDraftSync.saveBallot(requireElectionId(draft), draft.positions)
+    setPositions(saved.map((position) => ({
+      id: position.id,
+      title: position.title,
+      candidates: position.candidates.map((candidate) => ({
+        id: candidate.id,
+        name: candidate.name,
+        description: candidate.description ?? undefined,
+        photo: candidate.photoUrl ?? undefined,
+      })),
+    })))
+  }, 'Ballot saved')
 
   const activePosition = positions.find((position) => position.id === editingPositionId) ?? null
 
@@ -277,7 +294,20 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
 
           <div className="mt-10 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
             <Button variant="ghost" className="h-11 px-5 text-base text-[#111528]">Go Back</Button>
-            <Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={onNext}>Save and continue</Button>
+            <Button
+              className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]"
+              disabled={save.isPending}
+              onClick={() => {
+                const empty = positions.find((position) => position.candidates.length === 0)
+                if (empty) {
+                  toast.error(`Add at least one candidate to "${empty.title}".`)
+                  return
+                }
+                save.mutate(undefined, { onSuccess: onNext })
+              }}
+            >
+              {save.isPending ? 'Saving…' : 'Save and continue'}
+            </Button>
           </div>
         </div>
       )}
