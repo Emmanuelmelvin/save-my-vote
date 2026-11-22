@@ -4,8 +4,14 @@ import './index.css'
 import App from './App.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
+import { shouldRetry } from '@/lib/api/hooks'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: shouldRetry, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
