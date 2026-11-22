@@ -18,4 +18,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3000/api/health > /dev/null || exit 1
 # Pending migrations run on startup (DB_RUN_MIGRATIONS=true).
-CMD ["node", "dist/main.js"]
+# --enable-source-maps: stack traces (and Sentry issues) point at the .ts source lines.
+CMD ["node", "--enable-source-maps", "dist/main.js"]
