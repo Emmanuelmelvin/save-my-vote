@@ -1,0 +1,8 @@
+# Local env files hold secrets (SENTRY_AUTH_TOKEN) and dev-only values (VITE_API_URL=/api).
+# Production values come from the Vercel project's Environment Variables instead.
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
