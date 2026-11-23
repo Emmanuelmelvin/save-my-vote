@@ -92,7 +92,7 @@ export class AppConfig {
       clientSecret,
       callbackUrl:
         this.get('GOOGLE_CALLBACK_URL') ??
-        this.backendUrl('/api/auth/google/callback'),
+        this.backendUrl('/api/v1/auth/google/callback'),
     };
   }
 

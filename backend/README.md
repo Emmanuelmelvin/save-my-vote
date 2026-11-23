@@ -11,7 +11,7 @@ docker compose up -d db
 cd backend
 cp .env.example .env        # then fill in the three secrets (command is in the file)
 npm install
-npm run start:dev           # http://localhost:3000/api, docs at http://localhost:3000/api/docs
+npm run start:dev           # http://localhost:3000/api/v1 (health at /api/health), docs at http://localhost:3000/api/docs
 ```
 
 Migrations run automatically on start-up. Without `RESEND_API_KEY`, emails (verification links, voting codes) are printed to the terminal instead of being sent.
