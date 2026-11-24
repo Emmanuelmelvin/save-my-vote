@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import type { IconType } from 'react-icons'
 import {
   FiArrowRight,
@@ -19,8 +19,8 @@ import {
   FiUsers,
 } from 'react-icons/fi'
 import { Link } from 'wouter'
-import logo from '@/assets/image.png'
 import ballotArt from '@/assets/side.png'
+import { SiteFooter, SiteHeader } from '@/components/site'
 
 /* Colours match the onboarding screens and their ballot illustration. */
 const CTA_PRIMARY =
@@ -45,39 +45,6 @@ const SectionHeading: React.FC<{ eyebrow: string; title: string; intro?: string;
   </div>
 )
 
-/* ---------- Header ---------- */
-
-const NAV = [
-  { href: '#how-it-works', label: 'How it works' },
-  { href: '#features', label: 'Features' },
-  { href: '#voters', label: 'For voters' },
-  { href: '#faq', label: 'FAQ' },
-]
-
-const Header: React.FC = () => (
-  <header className="sticky top-0 z-40 border-b border-[#eef0f4] bg-white/85 backdrop-blur-md">
-    <div className="mx-auto flex h-[72px] max-w-[1200px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-      <a href="#top" className="shrink-0" aria-label="SaveMyVote home">
-        <img src={logo} alt="Save our votes" className="h-9 w-auto sm:h-10" />
-      </a>
-      <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
-        {NAV.map((item) => (
-          <a key={item.href} href={item.href} className="text-[15px] font-medium text-[#4b5563] transition hover:text-[#18203a]">
-            {item.label}
-          </a>
-        ))}
-      </nav>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <Link href="/login" className="rounded-[8px] px-3 py-2 text-[15px] font-medium text-[#18203a] transition hover:bg-[#f3f4f6]">
-          Log in
-        </Link>
-        <Link href="/signup" className={`${CTA_PRIMARY} h-10 px-4 text-[14px] sm:px-5`}>
-          Get started
-        </Link>
-      </div>
-    </div>
-  </header>
-)
 
 /* ---------- Hero ---------- */
 
@@ -384,28 +351,28 @@ const ClosingCta: React.FC = () => (
   </section>
 )
 
-const Footer: React.FC = () => (
-  <footer className="border-t border-[#eef0f4] bg-white">
-    <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6 lg:px-8">
-      <img src={logo} alt="Save our votes" className="h-8 w-auto" />
-      <p className="text-[14px] text-[#6b7280]">© {new Date().getFullYear()} SaveMyVote. Secure online elections.</p>
-    </div>
-  </footer>
-)
+const Landing: React.FC = () => {
+  // Coming from another page (e.g. a footer link to /#faq): jump to that section once it exists,
+  // otherwise start at the top.
+  useEffect(() => {
+    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView()
+    else window.scrollTo(0, 0)
+  }, [])
 
-const Landing: React.FC = () => (
-  <div className="min-h-screen bg-[#fdfdfd] text-[#111528]">
-    <Header />
-    <main>
-      <Hero />
-      <HowItWorks />
-      <Features />
-      <ForVoters />
-      <Faq />
-      <ClosingCta />
-    </main>
-    <Footer />
-  </div>
-)
+  return (
+    <div className="min-h-screen bg-[#fdfdfd] text-[#111528]">
+      <SiteHeader />
+      <main>
+        <Hero />
+        <HowItWorks />
+        <Features />
+        <ForVoters />
+        <Faq />
+        <ClosingCta />
+      </main>
+      <SiteFooter />
+    </div>
+  )
+}
 
 export default Landing

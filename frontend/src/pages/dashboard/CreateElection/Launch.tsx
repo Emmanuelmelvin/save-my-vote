@@ -270,7 +270,12 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
                   onChange={(event) => setAgreed(event.target.checked)}
                   className="h-5 w-5 rounded border-slate-300 text-[#003dff] focus:ring-[#003dff]"
                 />
-                <span className="text-sm text-[#5A5F73]">By continuing, you agree to the Privacy Policy and Terms of Service</span>
+                <span className="text-sm text-[#5A5F73]">
+                  I have authority to run this election, and I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener" className="font-medium text-[#003dff] hover:underline">Terms of Service</a> and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-[#003dff] hover:underline">Privacy Policy</a>, including
+                  having permission to email the voters on my list.
+                </span>
               </label>
             </div>
 

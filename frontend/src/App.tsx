@@ -2,6 +2,7 @@ import React from 'react'
 import { Redirect, Route, Switch } from 'wouter'
 import RequireAuth from '@/components/RequireAuth'
 import { useSession } from '@/lib/api/hooks'
+import About from '@/pages/About'
 import Dashboard from '@/pages/Dashboard'
 import Landing from '@/pages/Landing'
 import LoadingScreen from '@/pages/LoadingScreen'
@@ -10,6 +11,8 @@ import ForgotPassword from '@/pages/Onboarding/ForgotPassword'
 import Login from '@/pages/Onboarding/Login'
 import ResetPassword from '@/pages/Onboarding/ResetPassword'
 import SignUp from '@/pages/Onboarding/SignUp'
+import Privacy from '@/pages/Privacy'
+import Terms from '@/pages/Terms'
 import PreviewPage from '@/pages/Voting/PreviewPage'
 import VotePage from '@/pages/Voting/VotePage'
 
@@ -35,6 +38,9 @@ const App: React.FC = () => {
       <Route path="/" component={Home} />
       <Route path="/signup" component={SignUpRoute} />
       <Route path="/login" component={Login} />
+      <Route path="/about" component={About} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       <Route path="/check-email" component={CheckEmail} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
