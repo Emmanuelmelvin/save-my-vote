@@ -1,0 +1,63 @@
+# Fly.io config for the SaveMyVote API. Deploy from this folder:  fly deploy --ha=false
+# Run exactly one machine: migrations run on startup (no cross-instance lock) and the
+# rate limiter keeps its counts in memory. The every-minute invitation cron needs the
+# machine to stay up, so auto-stop is off.
+# Secrets (DATABASE_URL, JWT_*, OTP_SECRET, RESEND_API_KEY, GOOGLE_*, SENTRY_DSN) are
+# set with `fly secrets set`, never here.
+
+app = "savemyvote-api"
+primary_region = "lhr"
+# Nest closes the DB pool and lets the running cron sweep finish on SIGTERM.
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Start the new machine, wait for /api/health, then retire the old one.
+  strategy = "bluegreen"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  # Fly's proxy is the one hop in front of the app; needed for correct client IPs in rate limiting.
+  TRUST_PROXY = "true"
+  FRONTEND_URL = "https://savemyvote.mblob.me"
+  BACKEND_URL = "https://api.savemyvote.mblob.me"
+  COOKIE_SAME_SITE = "lax"
+  # Neon requires TLS. Use its direct (non "-pooler") connection string: the scheduler's
+  # session advisory lock does not work through PgBouncer in transaction mode.
+  DB_SSL = "true"
+  DB_RUN_MIGRATIONS = "true"
+  MAIL_FROM_ADDRESS = "no-reply@savemyvote.mblob.me"
+  MAIL_FROM_NAME = "SaveMyVote"
+  SENTRY_ENVIRONMENT = "production"
+  SCHEDULER_ENABLED = "true"
+  LOG_LEVEL = "info"
+  SWAGGER_ENABLED = "true"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+  [[http_service.checks]]
+    # Boot (Sentry, Nest, migrations, the Neon connection) takes about 25 s.
+    grace_period = "40s"
+    interval = "15s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

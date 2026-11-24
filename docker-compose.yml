@@ -1,7 +1,7 @@
 # Local stack for SaveMyVote.
 #   Database only (run the API with `npm run start:dev`):  docker compose up -d db
 #   Database and API:                                       docker compose up -d --build
-# The API reads its settings (secrets, RESEND_API_KEY, SENTRY_DSN...) from backend/.env;
+# The API reads its settings (secrets, SENDBYTE_API_KEY, SENTRY_DSN...) from backend/.env;
 # copy backend/.env.example first.
 
 name: savemyvote

@@ -8,6 +8,7 @@ import type { Election } from '../elections/entities/election.entity.js';
 import { EmailTemplateType } from '../elections/entities/email-template.entity.js';
 import { MailService, type MailMessage } from '../mail/mail.service.js';
 import { EmailLayout } from '../mail/templates/email-layout.js';
+import type { DeliveryOutcome } from '../mail/transports/mail-transport.js';
 import {
   TemplateRenderer,
   type TemplateVariables,
@@ -101,7 +102,7 @@ export class ElectionMailer {
     return this.mail.send(message);
   }
 
-  sendMany(messages: MailMessage[]): Promise<void> {
+  sendMany(messages: MailMessage[]): Promise<DeliveryOutcome[]> {
     return this.mail.sendMany(messages);
   }
 }

@@ -3,6 +3,8 @@ import { AppConfig } from '../config/app-config.service.js';
 import { AppMetrics } from '../observability/app-metrics.js';
 import {
   MailTransport,
+  toDeliveryError,
+  type DeliveryOutcome,
   type OutgoingEmail,
 } from './transports/mail-transport.js';
 
@@ -32,14 +34,34 @@ export class MailService {
     await this.track(1, () => this.transport.deliver(this.address(message)));
   }
 
-  /** All-or-nothing per batch of 100: a thrown error means none of that batch was accepted. */
-  async sendMany(messages: MailMessage[]): Promise<void> {
-    if (messages.length === 0) return;
-    await this.track(messages.length, () =>
-      this.transport.deliverMany(
+  /** One outcome per message, in order: a failed email doesn't stop the others. */
+  async sendMany(messages: MailMessage[]): Promise<DeliveryOutcome[]> {
+    if (messages.length === 0) return [];
+    let outcomes: DeliveryOutcome[];
+    try {
+      outcomes = await this.transport.deliverMany(
         messages.map((message) => this.address(message)),
-      ),
-    );
+      );
+    } catch (error) {
+      // A transport that fails the whole call: nothing was confirmed sent.
+      this.metrics.emailDelivery(
+        this.transport.name,
+        'failed',
+        messages.length,
+      );
+      const failure = toDeliveryError(error);
+      return messages.map(() => ({ delivered: false, error: failure }));
+    }
+    const sent = outcomes.filter((outcome) => outcome.delivered).length;
+    if (sent) this.metrics.emailDelivery(this.transport.name, 'sent', sent);
+    if (sent < outcomes.length) {
+      this.metrics.emailDelivery(
+        this.transport.name,
+        'failed',
+        outcomes.length - sent,
+      );
+    }
+    return outcomes;
   }
 
   private async track(

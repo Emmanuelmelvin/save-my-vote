@@ -4,7 +4,7 @@ import type { CookieOptions } from 'express';
 import { EnvironmentVariables, NodeEnv } from './environment.js';
 
 export interface MailSettings {
-  resendApiKey?: string;
+  apiKey?: string;
   fromAddress: string;
   fromName: string;
   replyTo?: string;
@@ -76,7 +76,7 @@ export class AppConfig {
 
   get mail(): MailSettings {
     return {
-      resendApiKey: this.get('RESEND_API_KEY'),
+      apiKey: this.get('SENDBYTE_API_KEY'),
       fromAddress: this.get('MAIL_FROM_ADDRESS'),
       fromName: this.get('MAIL_FROM_NAME'),
       replyTo: this.get('MAIL_REPLY_TO'),

@@ -14,7 +14,7 @@ npm install
 npm run start:dev           # http://localhost:3000/api/v1 (health at /api/health), docs at http://localhost:3000/api/docs
 ```
 
-Migrations run automatically on start-up. Without `RESEND_API_KEY`, emails (verification links, voting codes) are printed to the terminal instead of being sent.
+Migrations run automatically on start-up. Without `SENDBYTE_API_KEY`, emails (verification links, voting codes) are printed to the terminal instead of being sent.
 
 To run the API in Docker as well: `docker compose up -d --build` from the repo root (it reads `backend/.env`).
 
@@ -25,11 +25,15 @@ npm test            # unit tests
 npm run test:e2e    # full flow against a real database (needs `docker compose up -d db`)
 ```
 
-The e2e suite uses its own `savemyvote_test` database and captures emails in memory, so it never calls Resend or Sentry.
+The e2e suite uses its own `savemyvote_test` database and captures emails in memory, so it never calls SendByte or Sentry.
 
-## Email (Resend)
+## Email (SendByte)
 
-Set `RESEND_API_KEY` and a `MAIL_FROM_ADDRESS` on a domain verified in Resend. Voter invitations use Resend's batch endpoint (100 emails per request) and retry with backoff on rate limits or 5xx responses. Swapping providers means writing one `MailTransport` subclass (`src/mail/transports`).
+Set `SENDBYTE_API_KEY` and a `MAIL_FROM_ADDRESS` on a domain verified in SendByte (an `sk_test_` key simulates sends without delivering them).
+
+SendByte has no batch endpoint and allows 120 requests a minute per key, so every email is its own request, spaced 550 ms apart: about 109 a minute, so a 1,000-voter election takes roughly 9 minutes. The SDK retries rate-limited, 5xx and network failures with backoff under an idempotency key, so a retry never sends twice. Each voter is marked by their own email's outcome, and failed ones are retried on a later scheduler run.
+
+Swapping providers means writing one `MailTransport` subclass (`src/mail/transports`).
 
 ## Logging, monitoring and metrics
 
@@ -74,7 +78,7 @@ src/
   voters/        voter roll, CSV import, one-time codes, invitation and reminder emails
   voting/        public voting endpoints, ballot validation, results
   scheduler/     minute-by-minute invitation sweep
-  mail/          MailService + transports (Resend, console)
+  mail/          MailService + transports (SendByte, console)
   observability/ Winston logger, Sentry metrics, HTTP timing
 ```
 
