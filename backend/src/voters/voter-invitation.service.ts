@@ -37,7 +37,7 @@ export interface DispatchResult {
 
 /** After this many failed sends, a voter is skipped by the scheduler (the organiser can still resend). */
 export const MAX_INVITATION_FAILURES = 5;
-/** Matches Resend's batch limit, so each page of voters is one API request. */
+/** Voters per page: their codes are stored, then their emails sent, before the next page loads. */
 const BATCH_SIZE = 100;
 const FIRST_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -182,7 +182,7 @@ export class VoterInvitationService {
     return result;
   }
 
-  /** Walks the matching voters in id order, one page (= one batch email request) at a time. */
+  /** Walks the matching voters in id order, one page at a time. */
   private async sendInPages(
     election: Election,
     kind: EmailTemplateType.Invitation | EmailTemplateType.Reminder,
@@ -207,9 +207,10 @@ export class VoterInvitationService {
   }
 
   /**
-   * Stores each voter's new code hash first, then emails the whole page in one
-   * batch. A rejected batch counts as a failure for every voter in it; their
-   * failure counter goes up and the scheduler retries on a later run.
+   * Stores each voter's new code hash first, then emails the page. Each voter is
+   * marked by their own email's outcome: a failed one raises that voter's failure
+   * counter and the scheduler retries them on a later run, while voters whose
+   * email went out are not sent a second, different code.
    */
   private async issueCodesAndSend(
     voters: Voter[],
@@ -232,28 +233,39 @@ export class VoterInvitationService {
     }
     if (issued.length === 0) return { sent: 0, failed: 0 };
 
-    const ids = issued.map(({ voter }) => voter.id);
-    try {
-      await this.mailer.sendMany(
-        issued.map(({ voter, code }) => composer.compose(voter, code)),
-      );
-    } catch (error) {
+    const outcomes = await this.mailer.sendMany(
+      issued.map(({ voter, code }) => composer.compose(voter, code)),
+    );
+    const sentIds: string[] = [];
+    const failedIds: string[] = [];
+    issued.forEach(({ voter }, index) => {
+      const outcome = outcomes[index];
+      if (outcome?.delivered) {
+        sentIds.push(voter.id);
+        return;
+      }
+      failedIds.push(voter.id);
+      // Voter id only: email addresses never go into logs.
       this.logger.error(
-        `Sending ${issued.length} ${kind} email(s) failed: ${String(error)}`,
+        `Sending the ${kind} email to voter ${voter.id} failed: ${outcome ? outcome.error.message : 'no result'}`,
       );
-      await this.voters.increment({ id: In(ids) }, 'invitationFailures', 1);
-      this.metrics.voterEmails(kind, 0, issued.length);
-      return { sent: 0, failed: issued.length };
-    }
+    });
 
-    if (kind === EmailTemplateType.Invitation) {
+    if (failedIds.length > 0) {
+      await this.voters.increment(
+        { id: In(failedIds) },
+        'invitationFailures',
+        1,
+      );
+    }
+    if (sentIds.length > 0 && kind === EmailTemplateType.Invitation) {
       await this.voters.update(
-        { id: In(ids) },
+        { id: In(sentIds) },
         { invitationSentAt: new Date(), invitationFailures: 0 },
       );
     }
-    this.metrics.voterEmails(kind, issued.length, 0);
-    return { sent: issued.length, failed: 0 };
+    this.metrics.voterEmails(kind, sentIds.length, failedIds.length);
+    return { sent: sentIds.length, failed: failedIds.length };
   }
 
   private static assertCanEmailVoters(election: Election): void {

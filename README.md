@@ -19,4 +19,4 @@ npm install && npm run start:dev                # API on http://localhost:3000/a
 cd ../frontend && npm install && npm run dev    # UI on http://localhost:5173
 ```
 
-The Vite dev server proxies `/api` to the API, so the sign-in cookie works without any CORS setup. Without `RESEND_API_KEY`, verification links and voting codes are printed in the API's terminal.
+The Vite dev server proxies `/api` to the API, so the sign-in cookie works without any CORS setup. Without `SENDBYTE_API_KEY`, verification links and voting codes are printed in the API's terminal.

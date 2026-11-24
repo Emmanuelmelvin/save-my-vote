@@ -4,7 +4,7 @@ import { AccountMailer } from './account-mailer.js';
 import { MailService } from './mail.service.js';
 import { ConsoleMailTransport } from './transports/console-mail.transport.js';
 import { MailTransport } from './transports/mail-transport.js';
-import { ResendMailTransport } from './transports/resend-mail.transport.js';
+import { SendByteMailTransport } from './transports/sendbyte-mail.transport.js';
 
 @Global()
 @Module({
@@ -13,11 +13,11 @@ import { ResendMailTransport } from './transports/resend-mail.transport.js';
       provide: MailTransport,
       inject: [AppConfig],
       useFactory: (config: AppConfig): MailTransport => {
-        const { resendApiKey } = config.mail;
-        if (resendApiKey) return new ResendMailTransport(resendApiKey);
+        const { apiKey } = config.mail;
+        if (apiKey) return new SendByteMailTransport(apiKey);
         if (config.isProduction) {
           new Logger('Mail').warn(
-            'RESEND_API_KEY is not set: emails will be logged, not sent',
+            'SENDBYTE_API_KEY is not set: emails will be logged, not sent',
           );
         }
         return new ConsoleMailTransport();

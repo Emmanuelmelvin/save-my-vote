@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   Min,
   MinLength,
@@ -117,13 +118,15 @@ export class EnvironmentVariables {
   @IsIn(['lax', 'strict', 'none'])
   COOKIE_SAME_SITE: 'lax' | 'strict' | 'none' = 'lax';
 
-  // ---- Mail (Resend) ----
-  /** Resend API key (re_...). Leave empty to print emails to the log instead of sending them. */
+  // ---- Mail (SendByte) ----
+  /** SendByte API key (sk_live_... or sk_test_...). Leave empty to print emails to the log instead of sending them. */
   @IsOptional()
-  @IsString()
-  RESEND_API_KEY?: string;
+  @Matches(/^sk_(live|test)_\S+$/, {
+    message: 'SENDBYTE_API_KEY must start with sk_live_ or sk_test_',
+  })
+  SENDBYTE_API_KEY?: string;
 
-  /** Must be on a domain verified in Resend. */
+  /** Must be on a domain verified in SendByte (test keys can send from any address). */
   @IsEmail({ require_tld: false })
   MAIL_FROM_ADDRESS = 'no-reply@savemyvote.local';
 

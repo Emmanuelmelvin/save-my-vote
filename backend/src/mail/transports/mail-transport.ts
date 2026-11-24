@@ -19,9 +19,13 @@ export class MailDeliveryError extends Error {
   }
 }
 
+/** What happened to one email of a `deliverMany` call, in input order. */
+export type DeliveryOutcome =
+  { delivered: true } | { delivered: false; error: MailDeliveryError };
+
 /**
  * How email leaves the app. MailService depends on this abstraction; the concrete
- * transport is chosen once at startup (Resend in real environments, the console
+ * transport is chosen once at startup (SendByte in real environments, the console
  * when no API key is configured).
  */
 export abstract class MailTransport {
@@ -29,8 +33,26 @@ export abstract class MailTransport {
 
   abstract deliver(email: OutgoingEmail): Promise<void>;
 
-  /** Many emails at once. Transports with a batch API override this. */
-  async deliverMany(emails: OutgoingEmail[]): Promise<void> {
-    for (const email of emails) await this.deliver(email);
+  /**
+   * Many emails, one outcome each: a failed email doesn't stop the rest, so the
+   * caller knows exactly who got theirs.
+   */
+  async deliverMany(emails: OutgoingEmail[]): Promise<DeliveryOutcome[]> {
+    const outcomes: DeliveryOutcome[] = [];
+    for (const email of emails) {
+      try {
+        await this.deliver(email);
+        outcomes.push({ delivered: true });
+      } catch (error) {
+        outcomes.push({ delivered: false, error: toDeliveryError(error) });
+      }
+    }
+    return outcomes;
   }
+}
+
+export function toDeliveryError(error: unknown): MailDeliveryError {
+  return error instanceof MailDeliveryError
+    ? error
+    : new MailDeliveryError(String(error));
 }

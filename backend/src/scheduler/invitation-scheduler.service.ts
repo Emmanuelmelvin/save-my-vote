@@ -41,7 +41,9 @@ export class InvitationScheduler {
   @SentryCron('voter-invitations', {
     schedule: { type: 'crontab', value: '* * * * *' },
     checkinMargin: 2,
-    maxRuntime: 10,
+    // Minutes. Emails go out one request at a time (~109 a minute), so a
+    // 1,000-voter election takes about 9 minutes.
+    maxRuntime: 30,
     failureIssueThreshold: 3,
   })
   async tick(): Promise<void> {

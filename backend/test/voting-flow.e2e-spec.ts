@@ -12,7 +12,7 @@ import {
   type OutgoingEmail,
 } from '../src/mail/transports/mail-transport.js';
 
-/** Keeps emails in memory instead of sending them through Resend. */
+/** Keeps emails in memory instead of sending them through SendByte. */
 class CapturingMailTransport extends MailTransport {
   readonly name = 'capture';
   readonly sent: OutgoingEmail[] = [];
