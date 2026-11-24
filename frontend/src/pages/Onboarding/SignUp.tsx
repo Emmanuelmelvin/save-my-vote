@@ -47,7 +47,7 @@ const SignUp: React.FC = () => {
   return (
     <AuthLayout
       title="Get Started Now"
-      subtitle="Create your account to take part in the voting process and keep your verification flow in one place."
+      subtitle="Create an organiser account to set up and run your elections. Voters don’t need an account."
       illustration="signup"
       footer={<div className="text-[14px] text-[#18203a]">Already have an account? <Link href="/login" className="font-medium text-[#1050ff]">Login</Link></div>}
     >

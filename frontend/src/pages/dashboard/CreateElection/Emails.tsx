@@ -8,11 +8,15 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import useCreateElectionStore, { type EmailTemplate } from '@/store/createElection'
 import { ElectionDraftSync } from '@/lib/election-draft'
+import { EMAIL_TOKENS } from '@/lib/format'
 import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface EmailsProps {
   onNext?: () => void
+  onBack?: () => void
 }
+
+type EditableType = 'invitation' | 'reminder'
 
 const defaultTemplates: EmailTemplate[] = [
   {
@@ -31,18 +35,18 @@ const defaultTemplates: EmailTemplate[] = [
   },
 ]
 
-const emailInfo: Record<string, { label: string; info: string }> = {
+const emailInfo: Record<EditableType, { label: string; info: string }> = {
   invitation: {
     label: 'Voter Invitation',
-    info: 'This is the email that is sent to voters when the election starts.',
+    info: 'Sent to every voter automatically, shortly before voting opens, with their one-time code.',
   },
   reminder: {
     label: 'Voter Reminder',
-    info: 'This is the email that is delivered to the voters when the election administrator sends out a voting reminder to voters that have not voted.',
+    info: 'Sent to voters who haven’t voted yet when you choose “Remind non-voters” on the election’s Manage page.',
   },
 }
 
-const Emails: React.FC<EmailsProps> = ({ onNext }) => {
+const Emails: React.FC<EmailsProps> = ({ onNext, onBack }) => {
   const { title, emailTemplates, setEmailTemplates } = useCreateElectionStore()
 
   // Both emails are saved together. The voter's one-time code and the voting link
@@ -51,15 +55,20 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
     ElectionDraftSync.saveTemplates(requireElectionId(draft), draft.emailTemplates, draft.title),
   )
 
+  // Make sure both editable templates exist (a reopened draft may have only some).
   useEffect(() => {
-    if (emailTemplates.length === 0) setEmailTemplates(defaultTemplates)
-  }, [emailTemplates.length, setEmailTemplates])
+    const missing = defaultTemplates.filter((d) => !emailTemplates.some((t) => t.type === d.type))
+    if (missing.length) setEmailTemplates([...emailTemplates, ...missing])
+  }, [emailTemplates, setEmailTemplates])
 
-  const updateTemplate = (index: number, field: 'fromName' | 'subject' | 'body', value: string) => {
-    const updated = [...emailTemplates]
-    if (!updated[index]) return
-    updated[index] = { ...updated[index], [field]: value }
-    setEmailTemplates(updated)
+  const templateFor = (type: EditableType) =>
+    emailTemplates.find((t) => t.type === type) ?? defaultTemplates.find((t) => t.type === type)!
+
+  const updateTemplate = (type: EditableType, field: 'fromName' | 'subject' | 'body', value: string) => {
+    const current = templateFor(type)
+    const next = { ...current, [field]: value }
+    const exists = emailTemplates.some((t) => t.type === type)
+    setEmailTemplates(exists ? emailTemplates.map((t) => (t.type === type ? next : t)) : [...emailTemplates, next])
   }
 
   return (
@@ -74,7 +83,7 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
 
       <div className="mt-[21px] space-y-8 px-10 pb-10 max-[560px]:px-6">
         {(['invitation', 'reminder'] as const).map((type, index) => {
-          const template = emailTemplates[index] || defaultTemplates[index]
+          const template = templateFor(type)
           const info = emailInfo[type]
 
           return (
@@ -95,15 +104,15 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
                   <Input
                     id={`${type}-from-name`}
                     value={template.fromName}
-                    onChange={(event) => updateTemplate(index, 'fromName', event.target.value)}
+                    onChange={(event) => updateTemplate(type, 'fromName', event.target.value)}
                     placeholder="e.g., Email From John Doe"
                     className="mt-2 h-12 border-[#e3e3e3] px-5 text-base"
                   />
                 </div>
                 <div className="w-[171px] shrink-0 max-[560px]:w-full">
-                  <p className="text-lg font-medium text-[#111528]">Default:</p>
+                  <p className="text-lg font-medium text-[#111528]">If left blank</p>
                   <div className="mt-2 flex h-12 items-center">
-                    <p className="text-base text-[#111528]">{title || 'Election title'}</p>
+                    <p className="truncate text-base text-[#5A5F73]">{title || 'Your election title'}</p>
                   </div>
                 </div>
               </div>
@@ -114,7 +123,7 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
                 <Input
                   id={`${type}-subject`}
                   value={template.subject}
-                  onChange={(event) => updateTemplate(index, 'subject', event.target.value)}
+                  onChange={(event) => updateTemplate(type, 'subject', event.target.value)}
                   placeholder="e.g., You're invited to vote in the election: Senate Elections 2026"
                   className="mt-2 h-12 border-[#e3e3e3] px-5 text-base"
                 />
@@ -126,7 +135,7 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
                 <Textarea
                   id={`${type}-body`}
                   value={template.body}
-                  onChange={(event) => updateTemplate(index, 'body', event.target.value)}
+                  onChange={(event) => updateTemplate(type, 'body', event.target.value)}
                   placeholder="e.g., Hi %name%, please vote in the election with the details below..."
                   rows={4}
                   className="mt-2 min-h-[98px] resize-none border-[#e3e3e3] px-5 py-3 text-base"
@@ -134,13 +143,21 @@ const Emails: React.FC<EmailsProps> = ({ onNext }) => {
               </div>
 
               {/* Hint */}
-              <p className="mt-3 text-base leading-6 text-[#111528]">
-                You can add the token <strong>%name%</strong> to the email body, it will automatically be replaced by the voter's name.
-                Each voter's one-time code and the voting link are added below your message.
-              </p>
+              <div className="mt-3 text-sm leading-6 text-[#111528]">
+                <p>Use these in the subject or body and they’re filled in for each voter:</p>
+                <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                  {EMAIL_TOKENS.map(({ token, meaning }) => (
+                    <li key={token}><code className="rounded bg-[#E8EDFF] px-1.5 py-0.5 text-[#003DFF]">{token}</code> {meaning}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[#5A5F73]">Each voter’s one-time code and the voting link are added below your message.</p>
+              </div>
 
               {/* Save button */}
-              <div className="mt-3">
+              <div className="mt-3 flex items-center gap-3">
+                {index === 1 && (
+                  <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
+                )}
                 <Button
                   className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
                   disabled={save.isPending}

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { FiInfo } from 'react-icons/fi'
+import { FiCheck } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -10,16 +10,18 @@ import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface BrandingProps {
   onNext?: () => void
+  onBack?: () => void
 }
 
 const presetColors = [
+  { value: '#1050FF', label: 'Blue (default)' },
   { value: '#6D28D9', label: 'Purple' },
   { value: '#0D9488', label: 'Teal' },
   { value: '#DB2777', label: 'Pink' },
   { value: '#D97706', label: 'Amber' },
 ]
 
-const Branding: React.FC<BrandingProps> = ({ onNext }) => {
+const Branding: React.FC<BrandingProps> = ({ onNext, onBack }) => {
   const { branding, setBranding } = useCreateElectionStore()
   const logoInputRef = useRef<HTMLInputElement>(null)
   const save = useSaveStep((draft) => ElectionDraftSync.saveBranding(requireElectionId(draft), draft.branding))
@@ -35,8 +37,13 @@ const Branding: React.FC<BrandingProps> = ({ onNext }) => {
 
     const reader = new FileReader()
     reader.onload = () => setBranding({ ...branding, logo: String(reader.result ?? '') })
+    reader.onerror = () => toast.error('We could not read that image. Please try another file.')
     reader.readAsDataURL(file)
+    event.target.value = ''
   }
+
+  const current = branding.primaryColor.toLowerCase()
+  const isPreset = presetColors.some((color) => color.value.toLowerCase() === current)
 
   return (
     <Card className="mx-auto max-w-[664px] rounded-2xl border border-slate-200 bg-white p-0 shadow-sm">
@@ -53,28 +60,37 @@ const Branding: React.FC<BrandingProps> = ({ onNext }) => {
       <div className="flex flex-col items-end gap-8 px-10 pb-10 pt-8 max-[560px]:px-6">
         {/* Theme Color */}
         <div className="w-full">
-          <div className="flex items-center gap-3">
-            <p className="text-base font-medium text-[#111528]">Theme color</p>
-            <FiInfo className="h-6 w-6 text-[#9CA3AF]" />
-          </div>
-          <p className="mt-2 text-base leading-6 text-[#5A5F73]">Pick a main color for your election's interface.</p>
+          <p className="text-base font-medium text-[#111528]">Theme color</p>
+          <p className="mt-2 text-base leading-6 text-[#5A5F73]">Used for buttons, highlights and result bars on the voting page.</p>
 
           {/* Preset color swatches */}
-          <div className="mt-4 flex items-center gap-3">
-            {presetColors.map((color) => (
-              <button
-                key={color.value}
-                type="button"
-                className="h-9 w-9 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#003dff] focus:ring-offset-2"
-                style={{ backgroundColor: color.value }}
-                aria-label={color.label}
-                onClick={() => setBranding({ ...branding, primaryColor: color.value })}
-              />
-            ))}
+          <div className="mt-4 flex flex-wrap items-center gap-3" role="radiogroup" aria-label="Theme color">
+            {presetColors.map((color) => {
+              const selected = color.value.toLowerCase() === current
+              return (
+                <button
+                  key={color.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  title={color.label}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-white transition-all hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003dff] focus-visible:ring-offset-2 ${selected ? 'ring-2 ring-[#111528] ring-offset-2' : ''}`}
+                  style={{ backgroundColor: color.value }}
+                  aria-label={color.label}
+                  onClick={() => setBranding({ ...branding, primaryColor: color.value })}
+                >
+                  {selected && <FiCheck className="h-4 w-4" strokeWidth={3} aria-hidden />}
+                </button>
+              )
+            })}
             {/* Rainbow gradient swatch with plus */}
-            <label className="relative h-9 w-9 cursor-pointer rounded-full bg-gradient-to-br from-[#D90606] via-[#FFD400] to-[#4949FF] transition-all hover:scale-110" aria-label="Custom color">
+            <label
+              className={`relative h-9 w-9 cursor-pointer rounded-full bg-gradient-to-br from-[#D90606] via-[#FFD400] to-[#4949FF] transition-all hover:scale-110 ${isPreset ? '' : 'ring-2 ring-[#111528] ring-offset-2'}`}
+              title="Custom color"
+            >
               <input
                 type="color"
+                aria-label="Custom color"
                 value={branding.primaryColor}
                 onChange={(event) => setBranding({ ...branding, primaryColor: event.target.value })}
                 className="absolute inset-0 cursor-pointer opacity-0"
@@ -83,15 +99,19 @@ const Branding: React.FC<BrandingProps> = ({ onNext }) => {
                 <path d="M5 1V9M1 5H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </label>
+            <span className="ml-1 inline-flex items-center gap-2 text-sm text-[#5A5F73]">
+              <span className="h-4 w-4 rounded border border-slate-200" style={{ backgroundColor: branding.primaryColor }} aria-hidden />
+              <span className="font-mono uppercase">{branding.primaryColor}</span>
+            </span>
           </div>
         </div>
 
         {/* Logo Upload */}
         <div className="w-full" style={{ maxWidth: 544 }}>
           <div className="flex items-center gap-3">
-            <p className="text-base font-medium text-[#111528]">Logo Upload</p>
+            <p className="text-base font-medium text-[#111528]">Logo</p>
           </div>
-          <p className="mt-2 text-base leading-6 text-[#5A5F73]">Supported formats: PNG, JPG, SVG. Recommended size: 500 × 500px.</p>
+          <p className="mt-2 text-base leading-6 text-[#5A5F73]">PNG, JPG or SVG, up to 2 MB. Recommended size: 500 × 500px. Shown at the top of the voting page.</p>
 
           <div className="mt-4 flex items-center gap-4">
             {branding.logo && (
@@ -103,19 +123,27 @@ const Branding: React.FC<BrandingProps> = ({ onNext }) => {
               className="h-10 gap-2 rounded-lg border-[#9CA3AF] px-4 text-base text-[#111528] hover:bg-slate-50"
               onClick={() => logoInputRef.current?.click()}
             >
-              Upload Logo
+              {branding.logo ? 'Change logo' : 'Upload logo'}
             </Button>
+            {branding.logo && (
+              <Button variant="ghost" className="h-10 px-3 text-sm text-slate-500 hover:text-rose-600" onClick={() => setBranding({ ...branding, logo: null })}>
+                Remove
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Save & Continue */}
-        <Button
-          className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-          disabled={save.isPending}
-          onClick={() => save.mutate(undefined, { onSuccess: onNext })}
-        >
-          {save.isPending ? 'Saving…' : 'Save & Continue'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
+          <Button
+            className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
+            disabled={save.isPending}
+            onClick={() => save.mutate(undefined, { onSuccess: onNext })}
+          >
+            {save.isPending ? 'Saving…' : 'Save & Continue'}
+          </Button>
+        </div>
       </div>
     </Card>
   )

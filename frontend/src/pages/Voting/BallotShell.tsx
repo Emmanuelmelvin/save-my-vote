@@ -85,7 +85,7 @@ export const BallotForm: React.FC<BallotFormProps> = ({ ballot, submitting, subm
               return (
                 <label
                   key={candidate.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${selected ? 'bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)] ${selected ? 'bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}
                   style={selected ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 1px var(--accent)' } : undefined}
                 >
                   <input

@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useSearch } from 'wouter'
+import { useLocation, useSearch } from 'wouter'
 import { toast } from 'sonner'
 import AuthLayout from '@/components/AuthLayout'
-import { PasswordField, PrimaryButton } from '@/components/AuthControls'
+import { PasswordField, PrimaryButton, PrimaryLink } from '@/components/AuthControls'
 import forgotSideImage from '@/assets/side.png'
 import { queryKeys } from '@/lib/api/hooks'
 import { api } from '@/lib/api/services'
@@ -31,15 +31,13 @@ const ResetPassword: React.FC = () => {
   if (!token) {
     return (
       <AuthLayout title="Reset link missing" subtitle="Open the link from your password reset email, or request a new one." sideImageSrc={forgotSideImage}>
-        <Link href="/forgot-password">
-          <PrimaryButton type="button">Request a new link</PrimaryButton>
-        </Link>
+        <PrimaryLink href="/forgot-password">Request a new link</PrimaryLink>
       </AuthLayout>
     )
   }
 
   return (
-    <AuthLayout title="New Password" sideImageSrc={forgotSideImage}>
+    <AuthLayout title="Choose a new password" subtitle="Use at least 8 characters." sideImageSrc={forgotSideImage}>
       <form
         className="w-full max-w-[520px] space-y-8"
         onSubmit={(event) => {
@@ -58,7 +56,7 @@ const ResetPassword: React.FC = () => {
       >
         <div className="space-y-5">
           <PasswordField id="new-password" label="Password" required value={newPassword} onChange={setNewPassword} error={passwordError} />
-          <PasswordField id="confirm-password" label="Confirm Password" required value={confirmPassword} onChange={setConfirmPassword} />
+          <PasswordField id="confirm-password" label="Confirm password" required value={confirmPassword} onChange={setConfirmPassword} placeholder="Enter it again" />
         </div>
 
         <PrimaryButton type="submit" disabled={reset.isPending}>

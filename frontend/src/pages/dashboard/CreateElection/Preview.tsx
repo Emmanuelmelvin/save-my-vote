@@ -8,15 +8,19 @@ import useCreateElectionStore from '@/store/createElection'
 
 interface PreviewProps {
   onNext?: () => void
+  onBack?: () => void
 }
 
-const Preview: React.FC<PreviewProps> = ({ onNext }) => {
+const Preview: React.FC<PreviewProps> = ({ onNext, onBack }) => {
   const electionId = useCreateElectionStore((state) => state.electionId)
   const previewUrl = electionId ? `${window.location.origin}/preview/${electionId}` : ''
 
   const handleCopy = () => {
     if (!previewUrl) return
-    navigator.clipboard.writeText(previewUrl).then(() => toast.success('Link copied to clipboard'))
+    navigator.clipboard
+      .writeText(previewUrl)
+      .then(() => toast.success('Link copied to clipboard'))
+      .catch(() => toast.error('Couldn’t copy the link. Select it and copy it instead.'))
   }
 
   return (
@@ -40,7 +44,7 @@ const Preview: React.FC<PreviewProps> = ({ onNext }) => {
             </p>
 
             <div className="mt-2 flex items-center rounded-lg bg-white">
-              <div className="flex-1 truncate px-3 py-2 text-sm leading-[22px] text-[#5A5F73]">{previewUrl}</div>
+              <div className="flex-1 select-all truncate px-3 py-2 text-sm leading-[22px] text-[#5A5F73]">{previewUrl}</div>
               <button
                 type="button"
                 onClick={handleCopy}
@@ -55,7 +59,8 @@ const Preview: React.FC<PreviewProps> = ({ onNext }) => {
           <p className="w-full rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Save the Basic Info step first to get a preview link.</p>
         )}
 
-        <div className="flex items-center gap-3 self-end">
+        <div className="flex flex-wrap items-center justify-end gap-3 self-end">
+          <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
           <Button
             className="h-12 gap-2 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
             disabled={!previewUrl}

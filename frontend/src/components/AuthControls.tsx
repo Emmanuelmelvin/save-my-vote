@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { FaEye, FaEyeSlash, FaGoogle, FaMicrosoft } from 'react-icons/fa6'
 import { Button } from '@/components/ui/button'
 import { FiMail } from 'react-icons/fi'
+import { Link } from 'wouter'
 
 export const TextField: React.FC<{
   id: string
@@ -27,6 +28,8 @@ export const TextField: React.FC<{
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        required={required}
+        aria-invalid={error ? true : undefined}
         className="block h-[44px] w-full rounded-[7px] border border-[#e5e7eb] bg-white px-4 text-[15px] text-[#18203a] placeholder:text-[#b0b9c9] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/10"
       />
       {error ? <span className="text-sm text-[#d43939]">{error}</span> : null}
@@ -41,7 +44,9 @@ export const PasswordField: React.FC<{
   onChange: (value: string) => void
   error?: string
   required?: boolean
-}> = ({ id, label, value, onChange, error, required = false }) => {
+  placeholder?: string
+  autoComplete?: string
+}> = ({ id, label, value, onChange, error, required = false, placeholder = 'Enter a strong password', autoComplete = 'new-password' }) => {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
@@ -56,7 +61,10 @@ export const PasswordField: React.FC<{
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Enter a strong password"
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          required={required}
+          aria-invalid={error ? true : undefined}
           className="block h-[44px] w-full rounded-[7px] border border-[#e5e7eb] bg-white px-4 pr-11 text-[15px] text-[#18203a] placeholder:text-[#b0b9c9] outline-none transition focus:border-[#1d4ed8] focus:ring-2 focus:ring-[#1d4ed8]/10"
         />
         <button
@@ -212,10 +220,39 @@ export const HelperLink: React.FC<{
 
   return (
     <div className={`flex ${alignClass}`}>
-      <a href={href} className="text-[14px] font-medium text-[#3758F9] transition hover:text-[#003dff]">
+      <Link href={href} className="text-[14px] font-medium text-[#3758F9] transition hover:text-[#003dff]">
         {label}
-      </a>
+      </Link>
     </div>
+  )
+}
+
+/** A primary-styled link, for navigation that looks like a button (never a <button> inside an <a>). */
+export const PrimaryLink: React.FC<{ href: string; children: React.ReactNode }> = ({ href, children }) => (
+  <Link
+    href={href}
+    className="inline-flex h-[48px] w-full items-center justify-center rounded-[8px] bg-[#1050ff] text-[15px] font-medium text-white transition hover:bg-[#0b45e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1050ff]/40 focus-visible:ring-offset-2"
+  >
+    {children}
+  </Link>
+)
+
+const INBOXES: Array<{ domains: string[]; label: string; url: string }> = [
+  { domains: ['gmail.com', 'googlemail.com'], label: 'Open Gmail', url: 'https://mail.google.com' },
+  { domains: ['outlook.com', 'hotmail.com', 'live.com', 'msn.com'], label: 'Open Outlook', url: 'https://outlook.live.com/mail' },
+  { domains: ['yahoo.com', 'ymail.com'], label: 'Open Yahoo Mail', url: 'https://mail.yahoo.com' },
+  { domains: ['icloud.com', 'me.com', 'mac.com'], label: 'Open iCloud Mail', url: 'https://www.icloud.com/mail' },
+]
+
+/** A shortcut to the user's webmail, shown only when we recognise their email provider. */
+export const OpenInboxLink: React.FC<{ email: string }> = ({ email }) => {
+  const domain = email.split('@')[1]?.trim().toLowerCase() ?? ''
+  const inbox = INBOXES.find((item) => item.domains.includes(domain))
+  if (!inbox) return null
+  return (
+    <a href={inbox.url} target="_blank" rel="noreferrer" className="inline-flex text-[14px] font-medium text-[#1050ff] hover:underline">
+      {inbox.label}
+    </a>
   )
 }
 

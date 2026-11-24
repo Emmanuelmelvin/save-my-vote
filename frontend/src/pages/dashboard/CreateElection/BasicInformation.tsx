@@ -13,6 +13,12 @@ import { ElectionDraftSync } from '@/lib/election-draft'
 import useCreateElectionStore from '@/store/createElection'
 import { useSaveStep } from './useSaveStep'
 
+const startOfToday = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
 interface DateFieldProps {
   label: string
   date: Date | null
@@ -34,16 +40,16 @@ const DateField: React.FC<DateFieldProps> = ({ label, date, onChange }) => {
 
   return (
     <div className="flex flex-1 flex-col space-y-1.5">
-      <label className="text-xs font-medium text-slate-500">{label}</label>
+      <span className="text-xs font-medium text-slate-500">{label}</span>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className={cn('h-11 w-full justify-start border-slate-200 px-4 text-left font-normal transition-colors hover:border-[#1050ff] hover:bg-white', !date && 'text-muted-foreground')}>
+          <Button variant="outline" aria-label={`${label}: ${formattedDate ?? 'not set'}`} className={cn('h-11 w-full justify-start border-slate-200 px-4 text-left font-normal transition-colors hover:border-[#1050ff] hover:bg-white', !date && 'text-muted-foreground')}>
             <FiCalendar className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
             <span className={date ? 'font-medium text-slate-800' : 'text-slate-400'}>{formattedDate ?? 'Select date & time'}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl" align="start">
-          <Calendar mode="single" selected={date ?? undefined} onSelect={handleDateSelect} className="border-0 p-0" />
+          <Calendar mode="single" selected={date ?? undefined} defaultMonth={date ?? undefined} onSelect={handleDateSelect} disabled={{ before: startOfToday() }} className="border-0 p-0" />
           <TimePicker date={date} setDate={onChange} />
         </PopoverContent>
       </Popover>
@@ -73,11 +79,11 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
   const now = useNow()
 
   const startDateError = startDate && startDate.getTime() <= now + ONE_HOUR_MS
-    ? 'Start date must be at least 1 hour ahead from now.'
+    ? 'Voting must start at least 1 hour from now.'
     : null
 
   const endDateError = startDate && endDate && endDate.getTime() <= startDate.getTime() + ONE_HOUR_MS
-    ? 'End date must be at least 1 hour after the start date.'
+    ? 'Voting must stay open for at least 1 hour after it starts.'
     : !startDate && endDate
       ? 'Set a start date first.'
       : null
@@ -115,17 +121,18 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
         </div>
 
         <div>
-          <div className="flex items-center justify-between">
-            <label htmlFor="election-description" className="block text-sm font-medium text-slate-700">Description</label>
-            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-600" aria-label="Description help"><FiInfo size={14} /></Button>
-          </div>
-          <Textarea id="election-description" value={description} onChange={(event) => setBasicInfo({ title, description: event.target.value, startDate, endDate })} className="mt-2 h-28 resize-none rounded-lg border-slate-200 p-3 text-sm focus-visible:border-[#1050ff]" placeholder="This election will determine the new executives..." />
+          <label htmlFor="election-description" className="block text-sm font-medium text-slate-700">Description</label>
+          <p id="election-description-hint" className="mt-0.5 text-xs text-slate-500">Optional. Shown to voters on the sign-in page.</p>
+          <Textarea id="election-description" aria-describedby="election-description-hint" value={description} onChange={(event) => setBasicInfo({ title, description: event.target.value, startDate, endDate })} className="mt-2 h-28 resize-none rounded-lg border-slate-200 p-3 text-sm focus-visible:border-[#1050ff]" placeholder="This election will determine the new executives..." />
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="block text-sm font-medium text-slate-700">Election date & time</label>
-            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-600" aria-label="Date and time help"><FiInfo size={14} /></Button>
+          <div className="mb-2">
+            <p className="block text-sm font-medium text-slate-700">Election date & time<span className="text-rose-500">*</span></p>
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+              <FiInfo className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              In your local time. Voters get their codes by email shortly before voting opens.
+            </p>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row">
             <DateField label="Start date" date={startDate} onChange={(date) => setBasicInfo({ title, description, startDate: date, endDate })} />
@@ -136,7 +143,8 @@ const BasicInformation: React.FC<BasicInformationProps> = ({ onNext }) => {
         {startDateError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{startDateError}</p>}
         {endDateError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{endDateError}</p>}
 
-        <div className="flex justify-end border-t border-slate-100 pt-5">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+          {!title.trim() && <p className="text-xs text-slate-500">Add a title to continue.</p>}
           <Button className="h-11 rounded-lg bg-[#1050ff] px-6 font-medium text-white hover:bg-[#003fe6] disabled:cursor-not-allowed disabled:opacity-50" disabled={!canProceed || save.isPending} onClick={() => save.mutate(undefined, { onSuccess: onNext })}>{save.isPending ? 'Saving…' : 'Next'}</Button>
         </div>
       </div>

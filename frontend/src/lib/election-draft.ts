@@ -51,7 +51,7 @@ export class ElectionDraftMapper {
       .map((template) => ({
         type: template.type,
         fromName: (template.fromName.trim() || electionTitle.trim() || 'Electoral Committee').slice(0, 100),
-        subject: template.subject.trim(),
+        subject: toApiPlaceholders(template.subject.trim()),
         body: toApiPlaceholders(template.body),
       }))
   }
@@ -85,7 +85,7 @@ export class ElectionDraftMapper {
           id: template.type,
           type: template.type,
           fromName: template.isDefault ? '' : template.fromName,
-          subject: template.subject,
+          subject: fromApiPlaceholders(template.subject),
           body: fromApiPlaceholders(template.body),
         })),
       branding: {

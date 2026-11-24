@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { FiMenu, FiX, FiHome, FiPlus, FiBarChart2, FiHelpCircle, FiLogOut, FiMessageSquare } from 'react-icons/fi'
-import { useLocation } from 'wouter'
-import { toast } from 'sonner'
+import { Redirect, useLocation, useRoute } from 'wouter'
 import logo from '@/assets/image.png'
 import CreateElection from '@/pages/dashboard/CreateElection'
 import DashboardHome from '@/pages/dashboard/Overview'
@@ -28,11 +27,37 @@ const PAGE_TITLES: Record<Page, string> = {
 }
 
 const NavItem: React.FC<{ icon: React.ReactNode; children: React.ReactNode; active?: boolean; onClick?: () => void }> = ({ icon, children, active, onClick }) => (
-  <li onClick={onClick} className={`flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer ${active ? 'text-blue-600 bg-slate-50' : 'text-slate-700 hover:bg-slate-50'}`}>
-    <span className="text-lg">{icon}</span>
-    <span>{children}</span>
+  <li>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 ${active ? 'text-blue-600 bg-slate-50' : 'text-slate-700 hover:bg-slate-50'}`}
+    >
+      <span className="text-lg" aria-hidden>{icon}</span>
+      <span>{children}</span>
+    </button>
   </li>
 )
+
+/** Which dashboard page the URL (relative to /dashboard) points at. */
+function useDashboardRoute(): { page: Page | null; electionId: string | null } {
+  const [isHome] = useRoute('/')
+  const [isNew] = useRoute('/new')
+  const [isDraft, draft] = useRoute<{ id: string }>('/drafts/:id')
+  const [isManage, manage] = useRoute<{ id: string }>('/elections/:id')
+  const [isResultsAll] = useRoute('/results')
+  const [isResults, results] = useRoute<{ id: string }>('/results/:id')
+  const [isHelp] = useRoute('/help')
+  if (isHome) return { page: 'dashboard', electionId: null }
+  if (isNew) return { page: 'create', electionId: null }
+  if (isDraft) return { page: 'create', electionId: draft.id }
+  if (isManage) return { page: 'manage', electionId: manage.id }
+  if (isResultsAll) return { page: 'results', electionId: null }
+  if (isResults) return { page: 'results', electionId: results.id }
+  if (isHelp) return { page: 'help', electionId: null }
+  return { page: null, electionId: null }
+}
 
 const UserCard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { data: user } = useSession()
@@ -55,55 +80,76 @@ const UserCard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
 const Dashboard: React.FC = () => {
   const [open, setOpen] = useState(false)
-  const [activePage, setActivePage] = useState<Page>('dashboard')
-  const [selectedElectionId, setSelectedElectionId] = useState<string | null>(null)
-  const [, setLocation] = useLocation()
+  // Relative to /dashboard (the route is nested in App.tsx).
+  const [, navigate] = useLocation()
+  const { page: routePage, electionId: selectedElectionId } = useDashboardRoute()
+  const activePage: Page = routePage ?? 'dashboard'
   const client = useQueryClient()
   const logout = useLogout()
   const { data: user } = useSession()
   const { reset, hydrate } = useCreateElectionStore()
+  const loadedDraftId = useCreateElectionStore((state) => state.electionId)
+  const [draftError, setDraftError] = useState<string | null>(null)
   useUserJot(user)
 
-  const go = (page: Page, electionId: string | null = selectedElectionId) => {
-    setSelectedElectionId(electionId)
-    setActivePage(page)
+  const go = (path: string) => {
+    navigate(path)
     setOpen(false)
   }
 
   const startNewElection = () => {
     reset()
-    go('create', null)
+    go('/new')
   }
 
-  /** Opens a saved draft in the wizard. */
-  const editDraft = async (id: string) => {
-    try {
-      const [detail, voters] = await Promise.all([
-        client.fetchQuery({ queryKey: queryKeys.election(id), queryFn: () => api.elections.get(id) }),
-        client.fetchQuery({ queryKey: queryKeys.voters(id), queryFn: () => api.voters.listAll(id) }),
-      ])
-      hydrate(ElectionDraftMapper.fromApi(detail, voters))
-      go('create', id)
-    } catch (error) {
-      toast.error(errorMessage(error))
+  // A draft opened by URL (a refresh, or a shared link) is loaded into the wizard here.
+  const draftToLoad = activePage === 'create' && selectedElectionId && loadedDraftId !== selectedElectionId ? selectedElectionId : null
+  useEffect(() => {
+    if (!draftToLoad) return
+    let cancelled = false
+    Promise.all([
+      client.fetchQuery({ queryKey: queryKeys.election(draftToLoad), queryFn: () => api.elections.get(draftToLoad) }),
+      client.fetchQuery({ queryKey: queryKeys.voters(draftToLoad), queryFn: () => api.voters.listAll(draftToLoad) }),
+    ])
+      .then(([detail, voters]) => {
+        if (cancelled) return
+        if (detail.status !== 'draft') {
+          navigate(`/elections/${detail.id}`, { replace: true })
+          return
+        }
+        setDraftError(null)
+        hydrate(ElectionDraftMapper.fromApi(detail, voters))
+      })
+      .catch((error) => {
+        if (!cancelled) setDraftError(errorMessage(error))
+      })
+    return () => {
+      cancelled = true
     }
-  }
+  }, [draftToLoad, client, hydrate, navigate])
 
   const handleLogout = () =>
     logout.mutate(undefined, {
       onSettled: () => {
         reset()
         resetUserJot()
-        setLocation('/login')
+        navigate('~/login')
       },
     })
 
+  // Once a new election's first step is saved, give it its draft URL so a refresh keeps it.
+  useEffect(() => {
+    if (activePage === 'create' && !selectedElectionId && loadedDraftId) navigate(`/drafts/${loadedDraftId}`, { replace: true })
+  }, [activePage, selectedElectionId, loadedDraftId, navigate])
+
+  if (routePage === null) return <Redirect to="/" replace />
+
   const navItems = (
     <ul className="space-y-2">
-      <NavItem icon={<FiHome />} active={activePage === 'dashboard' || activePage === 'manage'} onClick={() => go('dashboard', null)}>Dashboard</NavItem>
+      <NavItem icon={<FiHome />} active={activePage === 'dashboard' || activePage === 'manage'} onClick={() => go('/')}>Dashboard</NavItem>
       <NavItem icon={<FiPlus />} active={activePage === 'create'} onClick={startNewElection}>Create Election</NavItem>
-      <NavItem icon={<FiBarChart2 />} active={activePage === 'results'} onClick={() => go('results')}>Results</NavItem>
-      <NavItem icon={<FiHelpCircle />} active={activePage === 'help'} onClick={() => go('help')}>Help Center</NavItem>
+      <NavItem icon={<FiBarChart2 />} active={activePage === 'results'} onClick={() => go(selectedElectionId ? `/results/${selectedElectionId}` : '/results')}>Results</NavItem>
+      <NavItem icon={<FiHelpCircle />} active={activePage === 'help'} onClick={() => go('/help')}>Help Center</NavItem>
       {userJotEnabled && (
         <NavItem
           icon={<FiMessageSquare />}
@@ -169,25 +215,35 @@ const Dashboard: React.FC = () => {
 
         <main className={activePage === 'create' ? 'flex-1 overflow-auto' : 'flex-1 overflow-auto p-8 max-[640px]:p-5'}>
           {activePage === 'create' ? (
-            <CreateElection
-              onOpenMenu={() => setOpen(true)}
-              onLaunched={(id) => go('manage', id)}
-            />
+            draftError ? (
+              <div className="mx-auto max-w-xl p-8 text-center">
+                <p className="text-sm text-rose-600">{draftError}</p>
+                <Button variant="outline" className="mt-4" onClick={() => go('/')}>Back to all elections</Button>
+              </div>
+            ) : draftToLoad ? (
+              <div className="m-8 h-64 animate-pulse rounded-lg bg-white" aria-label="Loading draft" />
+            ) : (
+              <CreateElection
+                key={selectedElectionId ?? 'new'}
+                onOpenMenu={() => setOpen(true)}
+                onLaunched={(id) => go(`/elections/${id}`)}
+              />
+            )
           ) : (
             <div className="mx-auto max-w-6xl">
               {activePage === 'dashboard' && (
                 <DashboardHome
                   onCreate={startNewElection}
-                  onEdit={(id) => void editDraft(id)}
-                  onManage={(id) => go('manage', id)}
-                  onResults={(id) => go('results', id)}
+                  onEdit={(id) => go(`/drafts/${id}`)}
+                  onManage={(id) => go(`/elections/${id}`)}
+                  onResults={(id) => go(`/results/${id}`)}
                 />
               )}
               {activePage === 'manage' && selectedElectionId && (
-                <ElectionManage electionId={selectedElectionId} onBack={() => go('dashboard', null)} onResults={(id) => go('results', id)} />
+                <ElectionManage electionId={selectedElectionId} onBack={() => go('/')} onResults={(id) => go(`/results/${id}`)} />
               )}
-              {activePage === 'results' && <Results electionId={selectedElectionId} onSelect={(id) => setSelectedElectionId(id)} />}
-              {activePage === 'help' && <HelpCenter />}
+              {activePage === 'results' && <Results electionId={selectedElectionId} onSelect={(id) => navigate(`/results/${id}`, { replace: true })} />}
+              {activePage === 'help' && <HelpCenter onCreate={startNewElection} />}
             </div>
           )}
         </main>
