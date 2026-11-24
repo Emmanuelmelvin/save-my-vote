@@ -188,8 +188,24 @@ export class VotingApi {
   }
 }
 
+export class UploadsApi {
+  private readonly http: ApiClient
+  constructor(client: ApiClient) {
+    this.http = client
+  }
+
+  /** Stores a candidate photo or logo and returns its public URL. */
+  async image(file: Blob, filename = 'image'): Promise<string> {
+    const form = new FormData()
+    form.append('file', file, filename)
+    const { url } = await this.http.upload<{ url: string }>('/uploads/images', form)
+    return url
+  }
+}
+
 export const api = {
   auth: new AuthApi(http),
+  uploads: new UploadsApi(http),
   elections: new ElectionsApi(http),
   voters: new VotersApi(http),
   voting: new VotingApi(http),

@@ -2,8 +2,9 @@
 # Run exactly one machine: migrations run on startup (no cross-instance lock) and the
 # rate limiter keeps its counts in memory. The every-minute invitation cron needs the
 # machine to stay up, so auto-stop is off.
-# Secrets (DATABASE_URL, JWT_*, OTP_SECRET, RESEND_API_KEY, GOOGLE_*, SENTRY_DSN) are
-# set with `fly secrets set`, never here.
+# Secrets (DATABASE_URL, JWT_*, OTP_SECRET, RESEND_API_KEY, GOOGLE_*, SENTRY_DSN,
+# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) are set with `fly secrets set`, never here.
+# The app refuses to start in production without the R2 settings.
 
 app = "savemyvote-api"
 primary_region = "lhr"
@@ -32,6 +33,12 @@ kill_timeout = "30s"
   DB_RUN_MIGRATIONS = "true"
   MAIL_FROM_ADDRESS = "no-reply@savemyvote.mblob.me"
   MAIL_FROM_NAME = "SaveMyVote"
+  # Cloudflare R2 bucket for candidate photos and logos (keys: R2_ACCESS_KEY_ID and
+  # R2_SECRET_ACCESS_KEY secrets). The public URL is the bucket's rate-limited r2.dev
+  # address; swap in a custom domain once mblob.me's DNS is on Cloudflare.
+  R2_ACCOUNT_ID = "397c640d9287a65697f6f55a274c8252"
+  R2_BUCKET = "savemyvote-images"
+  R2_PUBLIC_URL = "https://pub-1848db2d30de44b9a7aa6626dd1e72fd.r2.dev"
   SENTRY_ENVIRONMENT = "production"
   SCHEDULER_ENABLED = "true"
   LOG_LEVEL = "info"

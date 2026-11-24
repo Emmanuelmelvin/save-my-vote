@@ -137,6 +137,39 @@ export class EnvironmentVariables {
   @IsEmail()
   MAIL_REPLY_TO?: string;
 
+  // ---- Image storage (Cloudflare R2) ----
+  /** Leave every R2_* empty to keep uploads in a local folder (development only). */
+  @IsOptional()
+  @Matches(/^[a-f0-9]{32}$/, {
+    message: 'R2_ACCOUNT_ID must be the 32-character Cloudflare account ID',
+  })
+  R2_ACCOUNT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  R2_ACCESS_KEY_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  R2_SECRET_ACCESS_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  R2_BUCKET?: string;
+
+  /** Where the bucket is publicly readable: its custom domain or r2.dev URL. */
+  @IsOptional()
+  @IsUrl({
+    require_tld: false,
+    protocols: ['https', 'http'],
+    require_protocol: true,
+  })
+  R2_PUBLIC_URL?: string;
+
+  /** Where uploads go when R2 is not configured; served at BACKEND_URL/uploads. */
+  @IsString()
+  LOCAL_UPLOADS_DIR = 'uploads';
+
   // ---- Logging (Winston) ----
   @IsIn(['error', 'warn', 'info', 'http', 'verbose', 'debug'])
   LOG_LEVEL: 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' = 'info';
@@ -233,5 +266,33 @@ export function validateEnvironment(
       .join('\n');
     throw new Error(`Invalid environment configuration:\n${details}`);
   }
+  const storageError = checkStorageSettings(env);
+  if (storageError) {
+    throw new Error(`Invalid environment configuration:\n  - ${storageError}`);
+  }
   return env;
+}
+
+const R2_VARIABLES = [
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET',
+  'R2_PUBLIC_URL',
+] as const;
+
+/**
+ * R2 is all or nothing, and production needs it: a Fly machine's disk is wiped
+ * on every deploy, so images saved there would disappear.
+ */
+function checkStorageSettings(env: EnvironmentVariables): string | undefined {
+  const missing = R2_VARIABLES.filter((key) => !env[key]);
+  if (missing.length === 0) return undefined;
+  if (missing.length < R2_VARIABLES.length) {
+    return `R2 is partly configured; also set ${missing.join(', ')}`;
+  }
+  if (env.NODE_ENV === NodeEnv.Production) {
+    return `production stores images in Cloudflare R2; set ${R2_VARIABLES.join(', ')}`;
+  }
+  return undefined;
 }

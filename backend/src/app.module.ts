@@ -16,6 +16,7 @@ import { HealthController } from './health/health.controller.js';
 import { MailModule } from './mail/mail.module.js';
 import { ObservabilityModule } from './observability/observability.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module.js';
+import { UploadsModule } from './uploads/uploads.module.js';
 import { VotersModule } from './voters/voters.module.js';
 import { VotingModule } from './voting/voting.module.js';
 import { NodeEnv, type EnvironmentVariables } from './config/environment.js';
@@ -57,6 +58,7 @@ import { NodeEnv, type EnvironmentVariables } from './config/environment.js';
     VotersModule,
     VotingModule,
     SchedulerModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [

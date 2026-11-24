@@ -7,3 +7,5 @@ coverage/
 !.env.example
 *.log
 logs/
+# The local image folder (LOCAL_UPLOADS_DIR), not src/uploads.
+/uploads/

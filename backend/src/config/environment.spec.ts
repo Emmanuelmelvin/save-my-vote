@@ -41,4 +41,34 @@ describe('validateEnvironment', () => {
       validateEnvironment({ ...secrets, OTP_SECRET: 'short' }),
     ).toThrow(/OTP_SECRET/);
   });
+
+  describe('R2 image storage', () => {
+    const r2 = {
+      R2_ACCOUNT_ID: 'a'.repeat(32),
+      R2_ACCESS_KEY_ID: 'key-id',
+      R2_SECRET_ACCESS_KEY: 'secret',
+      R2_BUCKET: 'savemyvote-images',
+      R2_PUBLIC_URL: 'https://images.example.com',
+    };
+
+    it('is optional outside production', () => {
+      expect(() => validateEnvironment(secrets)).not.toThrow();
+      expect(() => validateEnvironment({ ...secrets, ...r2 })).not.toThrow();
+    });
+
+    it('is required in production', () => {
+      expect(() =>
+        validateEnvironment({ ...secrets, NODE_ENV: 'production' }),
+      ).toThrow(/R2_BUCKET/);
+      expect(() =>
+        validateEnvironment({ ...secrets, ...r2, NODE_ENV: 'production' }),
+      ).not.toThrow();
+    });
+
+    it('refuses a partial configuration', () => {
+      expect(() =>
+        validateEnvironment({ ...secrets, ...r2, R2_SECRET_ACCESS_KEY: '' }),
+      ).toThrow(/also set R2_SECRET_ACCESS_KEY/);
+    });
+  });
 });

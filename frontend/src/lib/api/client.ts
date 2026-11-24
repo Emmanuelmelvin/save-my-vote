@@ -64,14 +64,20 @@ export class ApiClient {
     return this.request<T>('DELETE', this.url(path))
   }
 
+  /** Multipart POST; the browser sets the Content-Type with its boundary. */
+  upload<T>(path: string, form: FormData): Promise<T> {
+    return this.request<T>('POST', this.url(path), form)
+  }
+
   private async request<T>(method: string, url: string, body?: unknown): Promise<T> {
+    const isForm = body instanceof FormData
     let response: Response
     try {
       response = await fetch(url, {
         method,
         credentials: 'include',
-        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        headers: body === undefined || isForm ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       })
     } catch {
       throw new ApiError(0, 'Could not reach the server. Check your connection and try again.')

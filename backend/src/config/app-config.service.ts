@@ -17,6 +17,21 @@ export interface GoogleSettings {
   callbackUrl: string;
 }
 
+/** Where uploaded images are stored and served from. */
+export type StorageSettings =
+  | {
+      driver: 'r2';
+      endpoint: string;
+      bucket: string;
+      accessKeyId: string;
+      secretAccessKey: string;
+      publicUrl: string;
+    }
+  | { driver: 'local'; root: string; publicUrl: string };
+
+/** Where the local upload folder is served, outside the /api prefix. */
+export const LOCAL_UPLOADS_PATH = '/uploads';
+
 /** Typed, read-only view of the validated environment. Inject this instead of reading process.env. */
 @Injectable()
 export class AppConfig {
@@ -93,6 +108,31 @@ export class AppConfig {
       callbackUrl:
         this.get('GOOGLE_CALLBACK_URL') ??
         this.backendUrl('/api/v1/auth/google/callback'),
+    };
+  }
+
+  /** R2 when configured (validateEnvironment makes that all or nothing), else a local folder. */
+  get storage(): StorageSettings {
+    const accountId = this.get('R2_ACCOUNT_ID');
+    const accessKeyId = this.get('R2_ACCESS_KEY_ID');
+    const secretAccessKey = this.get('R2_SECRET_ACCESS_KEY');
+    const bucket = this.get('R2_BUCKET');
+    const publicUrl = this.get('R2_PUBLIC_URL');
+    if (accountId && accessKeyId && secretAccessKey && bucket && publicUrl) {
+      return {
+        driver: 'r2',
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        bucket,
+        accessKeyId,
+        secretAccessKey,
+        // url() resolves keys against this base, so it must end in a slash.
+        publicUrl: publicUrl.endsWith('/') ? publicUrl : `${publicUrl}/`,
+      };
+    }
+    return {
+      driver: 'local',
+      root: this.get('LOCAL_UPLOADS_DIR'),
+      publicUrl: this.backendUrl(`${LOCAL_UPLOADS_PATH}/`),
     };
   }
 
