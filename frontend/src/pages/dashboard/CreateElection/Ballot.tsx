@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input'
 import useCreateElectionStore from '@/store/createElection'
 import type { Candidate, Position } from '@/store/createElection'
 import { ElectionDraftSync } from '@/lib/election-draft'
+import { ApiError } from '@/lib/api/client'
+import { MAX_SOURCE_IMAGE_BYTES, uploadImage } from '@/lib/image-upload'
 import { requireElectionId, useSaveStep } from './useSaveStep'
+
+/** Shown as 32–40px circles; 256px stays sharp on high-density screens. */
+const CANDIDATE_PHOTO_SIDE = 256
 
 interface BallotProps {
   onNext?: () => void
@@ -59,6 +64,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
   const [candidateForms, setCandidateForms] = useState<CandidateForm[]>([])
   const [expandedPositions, setExpandedPositions] = useState<Record<string, boolean>>({})
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const [uploadingPhotos, setUploadingPhotos] = useState<Record<string, boolean>>({})
 
   // Replaces the whole ballot on the server, then keeps the saved ids.
   const save = useSaveStep(async (draft) => {
@@ -169,23 +175,40 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
     syncCandidateForms(nextForms)
   }
 
-  const handlePhotoChange = (formId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Candidate photos must be 5 MB or smaller.')
-      event.target.value = ''
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, photo: String(reader.result) } : form)
+  // Refreshed after every render, so an upload that finishes later applies its
+  // photo to the forms as they are then, not as they were when it started.
+  const applyPhotoRef = useRef<(formId: string, url: string) => void>(() => {})
+  useEffect(() => {
+    applyPhotoRef.current = (formId, url) => {
+      if (!candidateForms.some((form) => form.id === formId)) return
+      const nextForms = candidateForms.map((form) => form.id === formId ? { ...form, photo: url } : form)
       setCandidateForms(nextForms)
       syncCandidateForms(nextForms)
     }
-    reader.onerror = () => toast.error('We could not read that photo. Please try another image.')
-    reader.readAsDataURL(file)
+  })
+
+  const handlePhotoChange = async (formId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+      toast.error('Candidate photos must be 20 MB or smaller.')
+      return
+    }
+
+    setUploadingPhotos((current) => ({ ...current, [formId]: true }))
+    try {
+      applyPhotoRef.current(formId, await uploadImage(file, CANDIDATE_PHOTO_SIDE))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.details : 'We could not upload that photo. Please try another image.')
+    } finally {
+      setUploadingPhotos((current) => {
+        const next = { ...current }
+        delete next[formId]
+        return next
+      })
+    }
   }
 
   const deleteCandidateForm = (formId: string) => {
@@ -253,6 +276,10 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
    * asked, moves on to the next step: one click from the panel or the page.
    */
   const saveBallot = (andContinue: boolean) => {
+    if (Object.keys(uploadingPhotos).length > 0) {
+      toast.error('Wait for the photos to finish uploading.')
+      return
+    }
     // A position name typed (new, or renamed) but not saved with "Save Position" would be lost.
     const savedTitle = positions.find((position) => position.id === editingPositionId)?.title ?? ''
     if (positionTitleEditing && positionTitle.trim() && positionTitle.trim() !== savedTitle) {
@@ -387,7 +414,11 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
                     {candidateForms.map((form, index) => (
                       <div key={form.id} className="flex items-center gap-3">
                         <input ref={(element) => { photoInputRefs.current[form.id] = element }} id={`candidate-photo-${form.id}`} type="file" accept="image/*" className="hidden" onChange={(event) => handlePhotoChange(form.id, event)} />
-                        {form.photo ? (
+                        {uploadingPhotos[form.id] ? (
+                          <div className="shrink-0 self-start mt-7 flex h-10 w-10 items-center justify-center rounded-full border border-slate-300" role="status" aria-label="Uploading photo">
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#003dff]" />
+                          </div>
+                        ) : form.photo ? (
                           <button type="button" onClick={() => photoInputRefs.current[form.id]?.click()} className="shrink-0 self-start mt-7" aria-label="Change photo">
                             <img src={form.photo} alt={form.name || 'Candidate'} className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-200 hover:ring-[#003dff] transition-all" />
                           </button>

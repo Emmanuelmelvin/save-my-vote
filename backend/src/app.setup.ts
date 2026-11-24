@@ -1,10 +1,11 @@
+import { resolve } from 'node:path';
 import { VersioningType, type INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AUTH_COOKIE_NAME } from './auth/auth-cookie.js';
-import { AppConfig } from './config/app-config.service.js';
+import { AppConfig, LOCAL_UPLOADS_PATH } from './config/app-config.service.js';
 import { AppMetrics } from './observability/app-metrics.js';
 import { HttpObservabilityMiddleware } from './observability/http-observability.middleware.js';
 
@@ -30,12 +31,27 @@ export function configureApp(app: NestExpressApplication): void {
   app.use(new HttpObservabilityMiddleware(app.get(AppMetrics)).handle);
   app.use(helmet());
   app.use(cookieParser());
-  // Base64 logos and candidate photos can be large.
+  // Older drafts still carry base64 logos and candidate photos.
   app.useBodyParser('json', { limit: '10mb' });
+  serveLocalUploads(app, config);
   app.enableCors({ origin: config.corsOrigins, credentials: true });
   app.enableShutdownHooks();
 
   if (config.swaggerEnabled) setUpSwagger(app);
+}
+
+/** Without R2 (development), uploaded images are files served at /uploads. */
+function serveLocalUploads(app: NestExpressApplication, config: AppConfig) {
+  const storage = config.storage;
+  if (storage.driver !== 'local') return;
+  app.useStaticAssets(resolve(storage.root), {
+    prefix: LOCAL_UPLOADS_PATH,
+    index: false,
+    setHeaders: (res) => {
+      // helmet sends same-origin, which would hide them from the frontend's origin.
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  });
 }
 
 function setUpSwagger(app: INestApplication): void {

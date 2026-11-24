@@ -35,6 +35,23 @@ SendByte has no batch endpoint and allows 120 requests a minute per key, so ever
 
 Swapping providers means writing one `MailTransport` subclass (`src/mail/transports`).
 
+## Image storage (Cloudflare R2)
+
+Candidate photos and election logos are uploaded to `POST /api/v1/uploads/images` (multipart, field `file`). The API checks the type from the file's bytes (JPEG, PNG, WebP or GIF; 415 otherwise), refuses files over 5 MB (413), stores the image under a random key with a one-year immutable `Cache-Control`, and returns its public URL. That URL is what elections and candidates save. The frontend shrinks images in the browser first (256px photos, 512px logos, WebP), so uploads are usually a few dozen KB.
+
+Without the `R2_*` variables, images are saved in `LOCAL_UPLOADS_DIR` and served at `BACKEND_URL/uploads`. Production refuses to start without R2, because a Fly machine's disk is wiped on every deploy.
+
+Setting up R2 (Cloudflare dashboard → R2):
+
+1. Create a bucket, e.g. `savemyvote-images`. That is `R2_BUCKET`.
+2. Make it publicly readable: bucket → Settings → Custom Domains → connect a domain on Cloudflare, e.g. `images.savemyvote.mblob.me`. That is `R2_PUBLIC_URL` (`https://images.savemyvote.mblob.me`). The `r2.dev` URL works for testing but is rate-limited.
+3. R2 → Manage API tokens → Create API token with **Object Read & Write**, limited to that bucket. Its Access Key ID and Secret Access Key are `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (the secret is shown once).
+4. `R2_ACCOUNT_ID` is the Account ID on the R2 overview page.
+
+The bucket needs no CORS rules: uploads go through the API, and browsers only load the images.
+
+Older drafts may still hold base64 `data:image/...` values; the API keeps accepting them, so those drafts can still be edited.
+
 ## Logging, monitoring and metrics
 
 | | Where | When |
@@ -79,6 +96,7 @@ src/
   voting/        public voting endpoints, ballot validation, results
   scheduler/     minute-by-minute invitation sweep
   mail/          MailService + transports (SendByte, console)
+  uploads/       image uploads to Cloudflare R2 (a local folder in development)
   observability/ Winston logger, Sentry metrics, HTTP timing
 ```
 

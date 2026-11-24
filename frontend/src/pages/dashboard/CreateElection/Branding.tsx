@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { FiCheck } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
@@ -6,7 +6,12 @@ import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 import useCreateElectionStore from '@/store/createElection'
 import { ElectionDraftSync } from '@/lib/election-draft'
+import { ApiError } from '@/lib/api/client'
+import { MAX_SOURCE_IMAGE_BYTES, uploadImage } from '@/lib/image-upload'
 import { requireElectionId, useSaveStep } from './useSaveStep'
+
+/** Matches the recommended 500 × 500px, with a little room. */
+const LOGO_SIDE = 512
 
 interface BrandingProps {
   onNext?: () => void
@@ -26,20 +31,28 @@ const Branding: React.FC<BrandingProps> = ({ onNext, onBack }) => {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const save = useSaveStep((draft) => ElectionDraftSync.saveBranding(requireElectionId(draft), draft.branding))
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target
+    const file = input.files?.[0]
+    input.value = ''
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('The logo must be 2 MB or smaller.')
-      event.target.value = ''
+    if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+      toast.error('The logo must be 20 MB or smaller.')
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => setBranding({ ...branding, logo: String(reader.result ?? '') })
-    reader.onerror = () => toast.error('We could not read that image. Please try another file.')
-    reader.readAsDataURL(file)
-    event.target.value = ''
+    setUploadingLogo(true)
+    try {
+      const logo = await uploadImage(file, LOGO_SIDE)
+      // Read the store again: the colour may have changed during the upload.
+      setBranding({ ...useCreateElectionStore.getState().branding, logo })
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.details : 'We could not upload that image. Please try another file.')
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   const current = branding.primaryColor.toLowerCase()
@@ -111,7 +124,7 @@ const Branding: React.FC<BrandingProps> = ({ onNext, onBack }) => {
           <div className="flex items-center gap-3">
             <p className="text-base font-medium text-[#111528]">Logo</p>
           </div>
-          <p className="mt-2 text-base leading-6 text-[#5A5F73]">PNG, JPG or SVG, up to 2 MB. Recommended size: 500 × 500px. Shown at the top of the voting page.</p>
+          <p className="mt-2 text-base leading-6 text-[#5A5F73]">PNG, JPG, WebP or SVG. Recommended size: 500 × 500px. Shown at the top of the voting page.</p>
 
           <div className="mt-4 flex items-center gap-4">
             {branding.logo && (
@@ -121,9 +134,10 @@ const Branding: React.FC<BrandingProps> = ({ onNext, onBack }) => {
             <Button
               variant="outline"
               className="h-10 gap-2 rounded-lg border-[#9CA3AF] px-4 text-base text-[#111528] hover:bg-slate-50"
+              disabled={uploadingLogo}
               onClick={() => logoInputRef.current?.click()}
             >
-              {branding.logo ? 'Change logo' : 'Upload logo'}
+              {uploadingLogo ? 'Uploading…' : branding.logo ? 'Change logo' : 'Upload logo'}
             </Button>
             {branding.logo && (
               <Button variant="ghost" className="h-10 px-3 text-sm text-slate-500 hover:text-rose-600" onClick={() => setBranding({ ...branding, logo: null })}>
@@ -138,7 +152,7 @@ const Branding: React.FC<BrandingProps> = ({ onNext, onBack }) => {
           <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
           <Button
             className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-            disabled={save.isPending}
+            disabled={save.isPending || uploadingLogo}
             onClick={() => save.mutate(undefined, { onSuccess: onNext })}
           >
             {save.isPending ? 'Saving…' : 'Save & Continue'}
