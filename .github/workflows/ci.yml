@@ -1,4 +1,5 @@
-# Lint, type-check, test and build the API and the web app.
+# Lint, type-check, test and build the API and the web app, then deploy the API to
+# Fly.io from main (needs the FLY_API_TOKEN repository secret).
 # Runs on every push (any branch), every pull request, merge-queue merges, and on demand.
 name: CI
 
@@ -117,3 +118,53 @@ jobs:
       # so no release is created and no source maps are uploaded from CI.
       - name: Build
         run: npm run build
+
+  # Deploys the API to Fly.io (backend/fly.toml) once every backend job has passed on
+  # main. The frontend deploys itself through Vercel's Git integration.
+  # Runs on pushes to main that change backend/, or on a manual run from main.
+  deploy-api:
+    name: Deploy API to Fly.io
+    needs: [backend, backend-e2e, backend-docker]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # One deploy at a time; a newer one waits instead of cancelling a deploy mid-way.
+    concurrency:
+      group: fly-deploy-api
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history, so the diff below covers every commit in the push.
+          fetch-depth: 0
+      - name: Did backend/ change?
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "push" ] || [ -z "$BEFORE" ] \
+             || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BEFORE" "$GITHUB_SHA" -- .; then
+            echo "No changes under backend/ in this push; skipping the deploy."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+      # superfly/flyctl-actions 1.6, pinned by commit.
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
+        if: steps.changes.outputs.deploy == 'true'
+      # --ha=false keeps exactly one machine (startup migrations, in-memory rate limits).
+      # Fly's builder builds the image; the run fails if the new machine's /api/health
+      # check doesn't pass, and the old machine keeps serving (blue-green).
+      - name: fly deploy
+        if: steps.changes.outputs.deploy == 'true'
+        run: flyctl deploy --remote-only --ha=false --env "SENTRY_RELEASE=$GITHUB_SHA"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
