@@ -111,6 +111,13 @@ export class AppConfig {
     };
   }
 
+  /** UserJot project for signing identity tokens, or undefined when not configured. */
+  get userJot(): { projectId: string; secret: string } | undefined {
+    const projectId = this.get('USERJOT_PROJECT_ID');
+    const secret = this.get('USERJOT_PROJECT_SECRET');
+    return projectId && secret ? { projectId, secret } : undefined;
+  }
+
   /** R2 when configured (validateEnvironment makes that all or nothing), else a local folder. */
   get storage(): StorageSettings {
     const accountId = this.get('R2_ACCOUNT_ID');

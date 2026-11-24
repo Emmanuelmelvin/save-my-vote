@@ -52,6 +52,12 @@ The bucket needs no CORS rules: uploads go through the API, and browsers only lo
 
 Older drafts may still hold base64 `data:image/...` values; the API keeps accepting them, so those drafts can still be edited.
 
+## Feedback identity (UserJot)
+
+The frontend's UserJot feedback widget asks `GET /api/v1/auth/userjot-token` (signed-in organisers only) for an identity token. The API signs it with HS256 using `USERJOT_PROJECT_SECRET`, with `sub` = the organiser's id, `iss` = `USERJOT_PROJECT_ID`, `aud` = `userjot`, a one-hour expiry, and the organiser's email, name and organisation as claims. UserJot trusts what's in a signed token, so each post is tied to the organiser who sent it and they can edit or delete their own posts.
+
+Both values are under UserJot → Settings → Login → Secrets. Set both or neither (the API refuses to start with only one). Without them the endpoint returns `{ "token": null }` and the widget falls back to an unsigned identity. In production the project ID is in `fly.toml`; set the secret with `fly secrets set USERJOT_PROJECT_SECRET=...` before deploying, or the new release won't start.
+
 ## Logging, monitoring and metrics
 
 | | Where | When |

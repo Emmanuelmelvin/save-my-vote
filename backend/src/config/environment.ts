@@ -205,6 +205,16 @@ export class EnvironmentVariables {
   @Max(1)
   SENTRY_TRACES_SAMPLE_RATE?: number;
 
+  // ---- UserJot feedback widget (optional) ----
+  /** Lets the API sign UserJot identity tokens, so feedback is tied to a verified organiser. Set both or neither. */
+  @IsOptional()
+  @IsString()
+  USERJOT_PROJECT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  USERJOT_PROJECT_SECRET?: string;
+
   // ---- Google OAuth (optional) ----
   @IsOptional()
   @IsString()
@@ -266,11 +276,19 @@ export function validateEnvironment(
       .join('\n');
     throw new Error(`Invalid environment configuration:\n${details}`);
   }
-  const storageError = checkStorageSettings(env);
-  if (storageError) {
-    throw new Error(`Invalid environment configuration:\n  - ${storageError}`);
+  const settingsError = checkStorageSettings(env) ?? checkUserJotSettings(env);
+  if (settingsError) {
+    throw new Error(`Invalid environment configuration:\n  - ${settingsError}`);
   }
   return env;
+}
+
+/** Half a UserJot setup would silently fall back to unsigned identities, so refuse it. */
+function checkUserJotSettings(env: EnvironmentVariables): string | undefined {
+  if (Boolean(env.USERJOT_PROJECT_ID) === Boolean(env.USERJOT_PROJECT_SECRET)) {
+    return undefined;
+  }
+  return 'set both USERJOT_PROJECT_ID and USERJOT_PROJECT_SECRET, or neither';
 }
 
 const R2_VARIABLES = [

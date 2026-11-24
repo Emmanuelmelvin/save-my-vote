@@ -2,8 +2,10 @@
 # Run exactly one machine: migrations run on startup (no cross-instance lock) and the
 # rate limiter keeps its counts in memory. The every-minute invitation cron needs the
 # machine to stay up, so auto-stop is off.
-# Secrets (DATABASE_URL, JWT_*, OTP_SECRET, RESEND_API_KEY, GOOGLE_*, SENTRY_DSN,
-# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) are set with `fly secrets set`, never here.
+# Secrets are set with `fly secrets set`, never here:
+#   DATABASE_URL, JWT_ACCESS_SECRET, JWT_EMAIL_SECRET, OTP_SECRET, SENDBYTE_API_KEY,
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SENTRY_DSN, R2_ACCESS_KEY_ID,
+#   R2_SECRET_ACCESS_KEY, USERJOT_PROJECT_SECRET.
 # The app refuses to start in production without the R2 settings.
 
 app = "savemyvote-api"
@@ -40,6 +42,9 @@ kill_timeout = "30s"
   R2_BUCKET = "savemyvote-images"
   R2_PUBLIC_URL = "https://pub-1848db2d30de44b9a7aa6626dd1e72fd.r2.dev"
   SENTRY_ENVIRONMENT = "production"
+  # UserJot project for signed feedback identities (needs the USERJOT_PROJECT_SECRET secret:
+  # the app refuses to start with only one of the two).
+  USERJOT_PROJECT_ID = "cmwsfmj3201rt0kqngoyfgcqd"
   SCHEDULER_ENABLED = "true"
   LOG_LEVEL = "info"
   SWAGGER_ENABLED = "true"
