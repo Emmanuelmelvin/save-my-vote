@@ -52,7 +52,7 @@ With `SENTRY_AUTH_TOKEN` set, `npm run build` creates a Sentry release named aft
 
 - The SDK (`https://cdn.userjot.com/sdk/v3/uj.js`) loads only when the dashboard opens, so voters on `/vote` never download it.
 - No floating button: the dashboard sidebar's **Send Feedback** item opens the widget on the feedback tab.
-- The signed-in organiser is identified by id, email, name and organisation, so their posts are attributed to them. Signing out logs them out of UserJot too.
-- Identity is unsigned (browser-supplied). To stop impersonation, or to let organisers edit and delete their own posts, the backend would need to sign a UserJot identity token with the project secret.
+- The signed-in organiser is identified with a token the API signs (`GET /auth/userjot-token`, see the backend README), so each post is tied to a verified organiser who can edit and delete it. Signing out logs them out of UserJot too.
+- If the API has no UserJot secret, or UserJot rejects the token, the widget falls back to an unsigned identity (id, email, name and organisation sent from the browser).
 
 Set `VITE_USERJOT_PROJECT_ID` as a build variable in production. Leave it empty to turn the widget off.
