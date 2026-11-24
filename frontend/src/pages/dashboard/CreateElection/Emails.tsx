@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { FiInfo, FiMail } from 'react-icons/fi'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -82,7 +81,7 @@ const Emails: React.FC<EmailsProps> = ({ onNext, onBack }) => {
       </div>
 
       <div className="mt-[21px] space-y-8 px-10 pb-10 max-[560px]:px-6">
-        {(['invitation', 'reminder'] as const).map((type, index) => {
+        {(['invitation', 'reminder'] as const).map((type) => {
           const template = templateFor(type)
           const info = emailInfo[type]
 
@@ -152,27 +151,21 @@ const Emails: React.FC<EmailsProps> = ({ onNext, onBack }) => {
                 </ul>
                 <p className="mt-2 text-[#5A5F73]">Each voter’s one-time code and the voting link are added below your message.</p>
               </div>
-
-              {/* Save button */}
-              <div className="mt-3 flex items-center gap-3">
-                {index === 1 && (
-                  <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
-                )}
-                <Button
-                  className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
-                  disabled={save.isPending}
-                  onClick={() =>
-                    save.mutate(undefined, {
-                      onSuccess: () => (index === 1 ? onNext?.() : toast.success('Email saved')),
-                    })
-                  }
-                >
-                  {save.isPending ? 'Saving…' : index === 0 ? 'Save' : 'Save & Continue'}
-                </Button>
-              </div>
             </div>
           )
         })}
+
+        {/* One action for both emails: they're saved together. */}
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+          <Button variant="ghost" className="h-12 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
+          <Button
+            className="h-12 rounded-lg bg-[#003dff] px-6 text-base font-medium text-white hover:bg-[#0034d9]"
+            disabled={save.isPending}
+            onClick={() => save.mutate(undefined, { onSuccess: onNext })}
+          >
+            {save.isPending ? 'Saving…' : 'Save and continue'}
+          </Button>
+        </div>
       </div>
     </Card>
   )
