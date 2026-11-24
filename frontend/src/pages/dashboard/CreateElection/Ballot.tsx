@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { FiClipboard, FiEdit2, FiFileText, FiPlus, FiTrash2, FiUpload, FiX } from 'react-icons/fi'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface BallotProps {
   onNext?: () => void
+  onBack?: () => void
 }
 
 type CandidateForm = {
@@ -49,7 +50,7 @@ const CandidateAvatar: React.FC<{ candidate: Candidate; className?: string }> = 
     : <span title={candidate.name} aria-label={candidate.name} className={`flex shrink-0 items-center justify-center rounded-full bg-[#e8edff] font-semibold text-[#003dff] ${className}`}>{candidate.name.slice(0, 1).toUpperCase()}</span>
 )
 
-const Ballot: React.FC<BallotProps> = ({ onNext }) => {
+const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
   const { positions, setPositions } = useCreateElectionStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingPositionId, setEditingPositionId] = useState<string | null>(null)
@@ -109,6 +110,20 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
     setDrawerOpen(false)
     resetDrawerState()
   }
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setDrawerOpen(false)
+      setEditingPositionId(null)
+      setPositionTitle('')
+      setPositionTitleEditing(false)
+      setCandidateForms([])
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [drawerOpen])
 
   const savePosition = () => {
     const result = positionSchema.safeParse({ title: positionTitle })
@@ -219,12 +234,15 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
   }
 
   const deletePosition = (positionId: string) => {
+    const position = positions.find((item) => item.id === positionId)
+    if (position && position.candidates.length > 0 && !window.confirm(`Delete "${position.title}" and its ${candidateLabel(position.candidates.length)}?`)) return
     setPositions(positions.filter((position) => position.id !== positionId))
     toast.success('Position deleted')
     if (editingPositionId === positionId) closeDrawer()
   }
 
   const clearBallot = () => {
+    if (!window.confirm('Remove every position and candidate from the ballot?')) return
     setPositions([])
     closeDrawer()
     toast.success('Ballot cleared')
@@ -293,7 +311,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
           </div>
 
           <div className="mt-10 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
-            <Button variant="ghost" className="h-11 px-5 text-base text-[#111528]">Go Back</Button>
+            <Button variant="ghost" className="h-11 px-5 text-base text-[#111528]" onClick={onBack}>Back</Button>
             <Button
               className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]"
               disabled={save.isPending}
@@ -313,7 +331,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
       )}
 
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex bg-slate-900/15 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Add position">
+        <div className="fixed inset-0 z-50 flex bg-slate-900/15 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={activePosition ? `Edit ${activePosition.title}` : 'Add position'}>
           <button type="button" className="min-w-0 flex-1 cursor-default" aria-label="Close position panel" onClick={closeDrawer} />
           <aside className="flex h-full w-full max-w-[580px] flex-col bg-white shadow-2xl">
             <div className="flex justify-end px-6 pt-6"><button type="button" onClick={closeDrawer} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Close position panel"><FiX className="h-5 w-5" /></button></div>
@@ -357,7 +375,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext }) => {
                         )}
                         <div className="min-w-0 flex-1">
                           <label htmlFor={`candidate-name-${form.id}`} className="block text-xs font-medium text-slate-600">Full name<span className="text-rose-500">*</span></label>
-                          <Input id={`candidate-name-${form.id}`} value={form.name} onChange={(event) => updateCandidateForm(form.id, event.target.value)} placeholder="Bola Tinubu" className="mt-1.5 h-10 border-slate-200 text-sm" required />
+                          <Input id={`candidate-name-${form.id}`} value={form.name} onChange={(event) => updateCandidateForm(form.id, event.target.value)} placeholder="e.g., Amina Bello" className="mt-1.5 h-10 border-slate-200 text-sm" required />
                         </div>
                         <button type="button" onClick={() => deleteCandidateForm(form.id)} className="shrink-0 self-start mt-7 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label={`Delete candidate ${index + 1}`}><FiTrash2 className="h-4 w-4" /></button>
                       </div>

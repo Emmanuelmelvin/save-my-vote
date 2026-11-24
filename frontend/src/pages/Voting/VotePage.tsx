@@ -75,7 +75,13 @@ const VotePage: React.FC<{ electionId: string }> = ({ electionId }) => {
             <h2 className="text-lg font-semibold">Voting has closed</h2>
             <p className="mt-1 text-sm text-slate-500">Closed {formatDateTime(data.endAt)}. Final results:</p>
           </div>
-          {results.data && <ResultsView results={results.data} accentColor={data.branding.primaryColor} />}
+          {results.isPending ? (
+            <div className="h-48 animate-pulse rounded-xl bg-white" aria-label="Loading results" />
+          ) : results.isError ? (
+            <p className="rounded-xl bg-white p-6 text-sm text-slate-500">Results aren’t available right now. Please try again shortly.</p>
+          ) : (
+            results.data && <ResultsView results={results.data} accentColor={data.branding.primaryColor} />
+          )}
         </div>
       )}
 

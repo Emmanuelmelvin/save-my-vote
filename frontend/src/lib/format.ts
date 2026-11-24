@@ -33,6 +33,15 @@ export const PHASE_STYLES: Record<ElectionPhase, string> = {
   ended: 'bg-[#e8edff] text-[#003dff]',
 }
 
-/** The frontend's `%name%` token, as the API's placeholder. */
-export const toApiPlaceholders = (text: string) => text.replace(/%name%/gi, '{{voterName}}')
-export const fromApiPlaceholders = (text: string) => text.replace(/\{\{\s*voterName\s*\}\}/g, '%name%')
+/** The friendly tokens organisers type in emails, and the API placeholders they stand for. */
+export const EMAIL_TOKENS: Array<{ token: string; api: string; meaning: string }> = [
+  { token: '%name%', api: 'voterName', meaning: 'the voter’s name' },
+  { token: '%election%', api: 'electionTitle', meaning: 'the election title' },
+  { token: '%start%', api: 'startAt', meaning: 'when voting opens' },
+  { token: '%end%', api: 'endAt', meaning: 'when voting closes' },
+]
+
+export const toApiPlaceholders = (text: string) =>
+  EMAIL_TOKENS.reduce((out, { token, api }) => out.replace(new RegExp(token, 'gi'), `{{${api}}}`), text)
+export const fromApiPlaceholders = (text: string) =>
+  EMAIL_TOKENS.reduce((out, { token, api }) => out.replace(new RegExp(`\\{\\{\\s*${api}\\s*\\}\\}`, 'g'), token), text)

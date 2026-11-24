@@ -8,7 +8,8 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const session = useSession()
 
   if (session.isPending) return <LoadingScreen />
-  if (!session.data) return <Redirect to="/login" replace />
+  // "~" makes the path absolute, as this also renders inside the nested /dashboard route.
+  if (!session.data) return <Redirect to="~/login" replace />
   return <>{children}</>
 }
 

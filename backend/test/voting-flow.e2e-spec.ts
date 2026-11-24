@@ -68,12 +68,20 @@ describe('Organiser and voter flow (e2e)', () => {
     await app?.close();
   });
 
+  it('serves the API under /api/v1 and the health check unversioned', async () => {
+    const http = request(app.getHttpServer());
+    await http.get('/api/health').expect(200);
+    await http.get('/api/v1/health').expect(404);
+    await http.post('/api/auth/login').send(credentials()).expect(404);
+    await http.post('/api/v1/auth/login').send(credentials()).expect(401);
+  });
+
   it('runs an election from sign-up to results', async () => {
     const http = request.agent(app.getHttpServer());
 
     // ---- Organiser account ----
-    await http.post('/api/auth/signup').send(organiser).expect(201);
-    await http.post('/api/auth/login').send(credentials()).expect(403); // not verified yet
+    await http.post('/api/v1/auth/signup').send(organiser).expect(201);
+    await http.post('/api/v1/auth/login').send(credentials()).expect(403); // not verified yet
 
     const verifyText = mail.lastTo(organiser.email, 'Verify').text;
     const verifyPath = new URL(
@@ -85,11 +93,11 @@ describe('Organiser and voter flow (e2e)', () => {
     expect(verified.headers.location).toContain('verified=true');
 
     await http
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send(credentials(organiser.email, 'wrong password!!'))
       .expect(401);
-    await http.post('/api/auth/login').send(credentials()).expect(200);
-    const me = await http.get('/api/auth/me').expect(200);
+    await http.post('/api/v1/auth/login').send(credentials()).expect(200);
+    const me = await http.get('/api/v1/auth/me').expect(200);
     expect(me.body).toMatchObject({
       status: 'success',
       data: { user: { email: organiser.email } },
@@ -97,7 +105,7 @@ describe('Organiser and voter flow (e2e)', () => {
 
     // ---- Draft election ----
     const created = await http
-      .post('/api/elections')
+      .post('/api/v1/elections')
       .send({
         title: 'Student Union 2027',
         startAt: new Date(Date.now() + 10 * 60_000),
@@ -107,7 +115,7 @@ describe('Organiser and voter flow (e2e)', () => {
     const electionId: string = created.body.data.id;
 
     const notReady = await http
-      .post(`/api/elections/${electionId}/launch`)
+      .post(`/api/v1/elections/${electionId}/launch`)
       .expect(422);
     expect(notReady.body.errors).toEqual(
       expect.arrayContaining([
@@ -117,7 +125,7 @@ describe('Organiser and voter flow (e2e)', () => {
     );
 
     await http
-      .put(`/api/elections/${electionId}/ballot`)
+      .put(`/api/v1/elections/${electionId}/ballot`)
       .send({
         positions: [
           {
@@ -130,7 +138,7 @@ describe('Organiser and voter flow (e2e)', () => {
       .expect(200);
 
     await http
-      .put(`/api/elections/${electionId}/email-templates`)
+      .put(`/api/v1/elections/${electionId}/email-templates`)
       .send({
         templates: [
           {
@@ -144,7 +152,7 @@ describe('Organiser and voter flow (e2e)', () => {
       .expect(200);
 
     const added = await http
-      .post(`/api/elections/${electionId}/voters`)
+      .post(`/api/v1/elections/${electionId}/voters`)
       .send({
         voters: [
           { email: voterEmails[0], fullName: 'Voter One' },
@@ -155,7 +163,7 @@ describe('Organiser and voter flow (e2e)', () => {
     expect(added.body.data).toMatchObject({ added: 1, skipped: 1 });
 
     const imported = await http
-      .post(`/api/elections/${electionId}/voters/import`)
+      .post(`/api/v1/elections/${electionId}/voters/import`)
       .attach(
         'file',
         Buffer.from(
@@ -171,7 +179,7 @@ describe('Organiser and voter flow (e2e)', () => {
     const stranger = request.agent(app.getHttpServer());
     const strangerEmail = `eve-${stamp}@example.com`;
     await stranger
-      .post('/api/auth/signup')
+      .post('/api/v1/auth/signup')
       .send({ ...organiser, email: strangerEmail })
       .expect(201);
     await dataSource.query(
@@ -179,21 +187,21 @@ describe('Organiser and voter flow (e2e)', () => {
       [strangerEmail],
     );
     await stranger
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send(credentials(strangerEmail))
       .expect(200);
-    await stranger.get(`/api/elections/${electionId}`).expect(404);
-    await stranger.post(`/api/elections/${electionId}/launch`).expect(404);
+    await stranger.get(`/api/v1/elections/${electionId}`).expect(404);
+    await stranger.post(`/api/v1/elections/${electionId}/launch`).expect(404);
 
     // ---- Launch: the election is locked ----
-    await http.post(`/api/elections/${electionId}/launch`).expect(200);
+    await http.post(`/api/v1/elections/${electionId}/launch`).expect(200);
     await http
-      .put(`/api/elections/${electionId}/ballot`)
+      .put(`/api/v1/elections/${electionId}/ballot`)
       .send({ positions: [] })
       .expect(409);
 
     const sent = await http
-      .post(`/api/elections/${electionId}/invitations/send`)
+      .post(`/api/v1/elections/${electionId}/invitations/send`)
       .expect(200);
     expect(sent.body.data).toEqual({ sent: 2, failed: 0 });
     const codes = voterEmails.map((email) => {
@@ -205,7 +213,7 @@ describe('Organiser and voter flow (e2e)', () => {
     // ---- Voting ----
     const voterApi = request(app.getHttpServer());
     await voterApi
-      .post(`/api/public/elections/${electionId}/verify`)
+      .post(`/api/v1/public/elections/${electionId}/verify`)
       .send({ email: voterEmails[0], otp: codes[0] })
       .expect(403); // not open yet
 
@@ -215,7 +223,7 @@ describe('Organiser and voter flow (e2e)', () => {
       .update(electionId, { startAt: new Date(Date.now() - 1000) });
 
     const ballot = (
-      await voterApi.get(`/api/public/elections/${electionId}`).expect(200)
+      await voterApi.get(`/api/v1/public/elections/${electionId}`).expect(200)
     ).body.data.ballot;
     const [president, secretary] = ballot;
     const choices = (presidentIndex: number) => [
@@ -227,15 +235,15 @@ describe('Organiser and voter flow (e2e)', () => {
     ];
 
     await voterApi
-      .post(`/api/public/elections/${electionId}/verify`)
+      .post(`/api/v1/public/elections/${electionId}/verify`)
       .send({ email: voterEmails[0], otp: 'AAAAAA' })
       .expect(401);
     await voterApi
-      .post(`/api/public/elections/${electionId}/verify`)
+      .post(`/api/v1/public/elections/${electionId}/verify`)
       .send({ email: voterEmails[0], otp: codes[0].toLowerCase() })
       .expect(200);
     await voterApi
-      .post(`/api/public/elections/${electionId}/vote`)
+      .post(`/api/v1/public/elections/${electionId}/vote`)
       .send({
         email: voterEmails[0],
         otp: codes[0],
@@ -246,7 +254,7 @@ describe('Organiser and voter flow (e2e)', () => {
     // Two simultaneous ballots from the same voter: exactly one is accepted.
     const attempts = await Promise.all(
       [0, 1].map(() =>
-        voterApi.post(`/api/public/elections/${electionId}/vote`).send({
+        voterApi.post(`/api/v1/public/elections/${electionId}/vote`).send({
           email: voterEmails[0],
           otp: codes[0],
           selections: choices(0),
@@ -256,16 +264,16 @@ describe('Organiser and voter flow (e2e)', () => {
     expect(attempts.map((r) => r.status).sort()).toEqual([201, 409]);
 
     await voterApi
-      .post(`/api/public/elections/${electionId}/vote`)
+      .post(`/api/v1/public/elections/${electionId}/vote`)
       .send({ email: voterEmails[1], otp: codes[1], selections: choices(1) })
       .expect(201);
 
     // ---- Results ----
     await voterApi
-      .get(`/api/public/elections/${electionId}/results`)
+      .get(`/api/v1/public/elections/${electionId}/results`)
       .expect(403); // still open
     const results = (
-      await http.get(`/api/elections/${electionId}/results`).expect(200)
+      await http.get(`/api/v1/elections/${electionId}/results`).expect(200)
     ).body.data;
     expect(results.analytics).toMatchObject({
       totalVoters: 2,
@@ -302,18 +310,18 @@ describe('Organiser and voter flow (e2e)', () => {
     const http = request.agent(app.getHttpServer());
     const email = `lock-${stamp}@example.com`;
     await http
-      .post('/api/auth/signup')
+      .post('/api/v1/auth/signup')
       .send({ ...organiser, email })
       .expect(201);
     await dataSource.query(
       'UPDATE users SET "isVerified" = true WHERE email = $1',
       [email],
     );
-    await http.post('/api/auth/login').send(credentials(email)).expect(200);
+    await http.post('/api/v1/auth/login').send(credentials(email)).expect(200);
 
     const { id } = (
       await http
-        .post('/api/elections')
+        .post('/api/v1/elections')
         .send({
           title: 'Lockout',
           startAt: new Date(Date.now() + 5 * 60_000),
@@ -322,13 +330,13 @@ describe('Organiser and voter flow (e2e)', () => {
         .expect(201)
     ).body.data;
     await http
-      .put(`/api/elections/${id}/ballot`)
+      .put(`/api/v1/elections/${id}/ballot`)
       .send({ positions: [{ title: 'P', candidates: [{ name: 'C' }] }] });
     await http
-      .post(`/api/elections/${id}/voters`)
+      .post(`/api/v1/elections/${id}/voters`)
       .send({ voters: [{ email: `voter-${email}` }] })
       .expect(201);
-    await http.post(`/api/elections/${id}/launch`).expect(200);
+    await http.post(`/api/v1/elections/${id}/launch`).expect(200);
     await dataSource
       .getRepository(Election)
       .update(id, { startAt: new Date(Date.now() - 1000) });
@@ -336,7 +344,7 @@ describe('Organiser and voter flow (e2e)', () => {
     const statuses: number[] = [];
     for (let i = 0; i < 6; i++) {
       const res = await request(app.getHttpServer())
-        .post(`/api/public/elections/${id}/verify`)
+        .post(`/api/v1/public/elections/${id}/verify`)
         .send({ email: `voter-${email}`, otp: 'ZZZZZZ' });
       statuses.push(res.status);
     }
@@ -347,7 +355,7 @@ describe('Organiser and voter flow (e2e)', () => {
     const http = request.agent(app.getHttpServer());
     const email = `after-${stamp}@example.com`;
     const signup = await http
-      .post('/api/auth/signup')
+      .post('/api/v1/auth/signup')
       .send({
         ...organiser,
         email,
@@ -363,11 +371,11 @@ describe('Organiser and voter flow (e2e)', () => {
       'UPDATE users SET "isVerified" = true WHERE email = $1',
       [email],
     );
-    await http.post('/api/auth/login').send(credentials(email)).expect(200);
+    await http.post('/api/v1/auth/login').send(credentials(email)).expect(200);
 
     const election = (
       await http
-        .post('/api/elections')
+        .post('/api/v1/elections')
         .send({
           title: 'After launch',
           startAt: new Date(Date.now() + 5 * 60_000),
@@ -377,35 +385,35 @@ describe('Organiser and voter flow (e2e)', () => {
     ).body.data;
     const id: string = election.id;
     await http
-      .put(`/api/elections/${id}/ballot`)
+      .put(`/api/v1/elections/${id}/ballot`)
       .send({ positions: [{ title: 'P', candidates: [{ name: 'C' }] }] })
       .expect(200);
     await http
-      .post(`/api/elections/${id}/voters`)
+      .post(`/api/v1/elections/${id}/voters`)
       .send({ voters: [{ email: `first-${email}` }] })
       .expect(201);
-    await http.post(`/api/elections/${id}/launch`).expect(200);
+    await http.post(`/api/v1/elections/${id}/launch`).expect(200);
 
     // Voters can still be added and removed.
     await http
-      .post(`/api/elections/${id}/voters`)
+      .post(`/api/v1/elections/${id}/voters`)
       .send({ voters: [{ email: `late-${email}` }] })
       .expect(201);
-    const roll = (await http.get(`/api/elections/${id}/voters`).expect(200))
+    const roll = (await http.get(`/api/v1/elections/${id}/voters`).expect(200))
       .body.data;
     expect(roll.pagination.total).toBe(2);
     const late = roll.items.find(
       (v: { email: string }) => v.email === `late-${email}`,
     );
-    await http.delete(`/api/elections/${id}/voters/${late.id}`).expect(204);
+    await http.delete(`/api/v1/elections/${id}/voters/${late.id}`).expect(204);
 
     // The end can move later, not earlier.
     await http
-      .post(`/api/elections/${id}/extend`)
+      .post(`/api/v1/elections/${id}/extend`)
       .send({ endAt: new Date(Date.now() + 30 * 60_000) })
       .expect(400);
     const extended = await http
-      .post(`/api/elections/${id}/extend`)
+      .post(`/api/v1/elections/${id}/extend`)
       .send({ endAt: new Date(Date.now() + 2 * 60 * 60_000) })
       .expect(200);
     expect(new Date(extended.body.data.endAt).getTime()).toBeGreaterThan(
@@ -413,14 +421,14 @@ describe('Organiser and voter flow (e2e)', () => {
     );
 
     // Closing ends voting; the roll is then frozen and results are public.
-    const closed = await http.post(`/api/elections/${id}/close`).expect(200);
+    const closed = await http.post(`/api/v1/elections/${id}/close`).expect(200);
     expect(closed.body.data.phase).toBe('ended');
     await http
-      .post(`/api/elections/${id}/voters`)
+      .post(`/api/v1/elections/${id}/voters`)
       .send({ voters: [{ email: `too-late-${email}` }] })
       .expect(409);
     await request(app.getHttpServer())
-      .get(`/api/public/elections/${id}/results`)
+      .get(`/api/v1/public/elections/${id}/results`)
       .expect(200);
   });
 });

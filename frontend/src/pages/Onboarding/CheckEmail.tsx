@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useSearch } from 'wouter'
+import { useSearch } from 'wouter'
 import { toast } from 'sonner'
 import AuthLayout from '@/components/AuthLayout'
-import { PrimaryButton } from '@/components/AuthControls'
+import { OpenInboxLink, PrimaryLink } from '@/components/AuthControls'
 import { api } from '@/lib/api/services'
 import { errorMessage } from '@/lib/format'
 
@@ -31,14 +31,12 @@ const CheckEmail: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Verify your Email address"
+      title="Verify your email address"
       subtitle={`We’ve sent a verification link to ${email || 'your email address'}. Click it to activate your account, then log in.`}
       illustration="signup"
     >
       <div className="w-full max-w-[540px] space-y-8">
-        <a href="https://mail.google.com" target="_blank" rel="noreferrer" className="inline-flex text-[14px] font-medium text-[#1050ff]">
-          Open Gmail
-        </a>
+        <OpenInboxLink email={email} />
 
         <p className="text-[14px] text-[#374151]">
           Didn’t get the email? Check your spam folder, or{' '}
@@ -57,9 +55,7 @@ const CheckEmail: React.FC = () => {
           ) : null}
         </p>
 
-        <Link href="/login">
-          <PrimaryButton type="button">Go to login</PrimaryButton>
-        </Link>
+        <PrimaryLink href="/login">Go to login</PrimaryLink>
       </div>
     </AuthLayout>
   )

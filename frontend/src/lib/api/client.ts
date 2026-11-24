@@ -89,4 +89,4 @@ export class ApiClient {
   }
 }
 
-export const http = new ApiClient(import.meta.env.VITE_API_URL ?? '/api')
+export const http = new ApiClient(import.meta.env.VITE_API_URL ?? '/api/v1')

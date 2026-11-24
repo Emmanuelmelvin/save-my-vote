@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link } from 'wouter'
 import AuthLayout from '@/components/AuthLayout'
-import { PrimaryButton, TextField } from '@/components/AuthControls'
+import { OpenInboxLink, PrimaryButton, PrimaryLink, TextField } from '@/components/AuthControls'
 import forgotSideImage from '@/assets/side.png'
 import { api } from '@/lib/api/services'
 import { errorMessage } from '@/lib/format'
@@ -38,7 +38,7 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <AuthLayout
-      title={step === 'request' ? 'Forgot Password' : 'Check your email'}
+      title={step === 'request' ? 'Forgot password' : 'Check your email'}
       subtitle={
         step === 'request'
           ? 'Enter the email address linked to your account and we’ll send you a link to reset your password.'
@@ -59,12 +59,13 @@ const ForgotPassword: React.FC = () => {
             <PrimaryButton type="submit" disabled={request.isPending}>
               {request.isPending ? 'Sending…' : 'Send reset link'}
             </PrimaryButton>
+            <p className="text-center text-[14px] text-[#6b7280]">
+              Remembered it? <Link href="/login" className="font-medium text-[#1050ff]">Back to login</Link>
+            </p>
           </form>
         ) : (
           <div className="space-y-6">
-            <a href="https://mail.google.com" target="_blank" rel="noreferrer" className="inline-flex text-[14px] font-medium text-[#1050ff]">
-              Open Gmail
-            </a>
+            <OpenInboxLink email={email} />
             <p className="text-[14px] text-[#374151]">
               Didn’t get the email?{' '}
               <button
@@ -81,9 +82,7 @@ const ForgotPassword: React.FC = () => {
                 </span>
               ) : null}
             </p>
-            <Link href="/login">
-              <PrimaryButton type="button">Back to login</PrimaryButton>
-            </Link>
+            <PrimaryLink href="/login">Back to login</PrimaryLink>
           </div>
         )}
       </div>

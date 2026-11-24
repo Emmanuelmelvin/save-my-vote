@@ -144,12 +144,17 @@ const ElectionManage: React.FC<ElectionManageProps> = ({ electionId, onBack, onR
         <h3 className="text-sm font-semibold text-slate-700">Voting link</h3>
         <p className="mt-1 text-sm text-slate-500">Voters sign in here with their email and the one-time code from their invitation.</p>
         <div className="mt-3 flex items-center rounded-lg border border-slate-200">
-          <span className="flex-1 truncate px-3 py-2 text-sm text-slate-600">{data.votingLink}</span>
+          <span className="flex-1 select-all truncate px-3 py-2 text-sm text-slate-600">{data.votingLink}</span>
           <button
             type="button"
             className="flex h-9 w-10 items-center justify-center bg-[#e8edff] text-slate-600"
             aria-label="Copy voting link"
-            onClick={() => navigator.clipboard.writeText(data.votingLink).then(() => toast.success('Link copied'))}
+            onClick={() =>
+              navigator.clipboard
+                .writeText(data.votingLink)
+                .then(() => toast.success('Link copied'))
+                .catch(() => toast.error('Couldn’t copy the link. Select it and copy it instead.'))
+            }
           >
             <FiCopy className="h-4 w-4" />
           </button>
@@ -198,7 +203,7 @@ const ElectionManage: React.FC<ElectionManageProps> = ({ electionId, onBack, onR
                 value={newEndAt}
                 min={toLocalInputValue(new Date(data.endAt))}
                 onChange={(event) => setNewEndAt(event.target.value)}
-                className="mt-1 h-10 w-[240px]"
+                className="mt-1 h-10 w-full sm:w-[240px]"
               />
             </label>
             <Button type="submit" className="h-10 bg-[#003dff] text-white" disabled={!newEndAt || extend.isPending}>Extend</Button>
@@ -209,7 +214,7 @@ const ElectionManage: React.FC<ElectionManageProps> = ({ electionId, onBack, onR
       <section className="rounded-lg border border-slate-100 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-slate-700">Voters</h3>
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search voters…" className="h-9 w-[220px]" />
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search voters…" aria-label="Search voters" className="h-9 w-full sm:w-[220px]" />
         </div>
 
         {open && (
@@ -220,8 +225,8 @@ const ElectionManage: React.FC<ElectionManageProps> = ({ electionId, onBack, onR
               if (voterEmail.trim()) addVoter.mutate()
             }}
           >
-            <Input value={voterName} onChange={(event) => setVoterName(event.target.value)} placeholder="Full name" className="h-10 w-[200px]" />
-            <Input type="email" required value={voterEmail} onChange={(event) => setVoterEmail(event.target.value)} placeholder="Email address" className="h-10 w-[240px]" />
+            <Input value={voterName} onChange={(event) => setVoterName(event.target.value)} placeholder="Full name" aria-label="New voter's full name" className="h-10 w-full sm:w-[200px]" />
+            <Input type="email" required value={voterEmail} onChange={(event) => setVoterEmail(event.target.value)} placeholder="Email address" aria-label="New voter's email address" className="h-10 w-full sm:w-[240px]" />
             <Button type="submit" variant="outline" className="h-10 gap-2 border-[#3758f9] text-[#3758f9]" disabled={addVoter.isPending}>
               <FiPlus className="h-4 w-4" />Add voter
             </Button>
@@ -254,7 +259,9 @@ const ElectionManage: React.FC<ElectionManageProps> = ({ electionId, onBack, onR
                             <button type="button" title="Send a new code" aria-label={`Send ${voter.email} a new code`} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#003dff]" disabled={resend.isPending} onClick={() => resend.mutate(voter.id)}>
                               <FiRefreshCw className="h-4 w-4" />
                             </button>
-                            <button type="button" title="Remove voter" aria-label={`Remove ${voter.email}`} className="rounded p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600" disabled={removeVoter.isPending} onClick={() => removeVoter.mutate(voter.id)}>
+                            <button type="button" title="Remove voter" aria-label={`Remove ${voter.email}`} className="rounded p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600" disabled={removeVoter.isPending} onClick={() => {
+                              if (window.confirm(`Remove ${voter.fullName || voter.email} from this election? Their code will stop working.`)) removeVoter.mutate(voter.id)
+                            }}>
                               <FiTrash2 className="h-4 w-4" />
                             </button>
                           </>

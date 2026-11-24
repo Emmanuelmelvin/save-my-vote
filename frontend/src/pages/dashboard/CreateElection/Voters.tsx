@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { FiFileText, FiPlus, FiSearch, FiTrash2, FiUpload, FiUsers, FiX } from 'react-icons/fi'
 import { toast } from 'sonner'
 
@@ -13,10 +13,44 @@ import { requireElectionId, useSaveStep } from './useSaveStep'
 
 interface VotersProps {
   onNext?: () => void
+  onBack?: () => void
 }
 
 type PanelMode = 'manual' | 'import' | null
 type ImportRow = Pick<Voter, 'name' | 'email'>
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailKey = (email: string) => email.trim().toLowerCase()
+
+/**
+ * Keeps rows with a valid email that isn't already on the list (or earlier in
+ * the same batch), and counts what was dropped so the organiser is told.
+ */
+function mergeRows(existing: Voter[], rows: ImportRow[]) {
+  const seen = new Set(existing.map((voter) => emailKey(voter.email)))
+  const accepted: ImportRow[] = []
+  let duplicates = 0
+  let invalid = 0
+  for (const row of rows) {
+    const key = emailKey(row.email)
+    if (!EMAIL.test(key)) invalid += 1
+    else if (seen.has(key)) duplicates += 1
+    else {
+      seen.add(key)
+      accepted.push({ name: row.name.trim(), email: row.email.trim() })
+    }
+  }
+  return { accepted, duplicates, invalid }
+}
+
+const skippedNote = (duplicates: number, invalid: number) => {
+  const parts = [
+    duplicates ? `${duplicates} already on the list` : '',
+    invalid ? `${invalid} with an invalid email` : '',
+  ].filter(Boolean)
+  return parts.length ? ` Skipped ${parts.join(' and ')}.` : ''
+}
 
 const makeVoter = (row: ImportRow, index: number): Voter => {
   const sequence = String(index + 1).padStart(3, '0')
@@ -60,7 +94,7 @@ const parseSpreadsheet = async (file: File): Promise<ImportRow[]> => {
   }).filter((row) => row.name && row.email)
 }
 
-const Voters: React.FC<VotersProps> = ({ onNext }) => {
+const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
   const { voters, setVoters } = useCreateElectionStore()
   const [panelMode, setPanelMode] = useState<PanelMode>(null)
   const [showList, setShowList] = useState(voters.length > 0)
@@ -98,9 +132,23 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
     setPanelMode(null)
   }
 
+  useEffect(() => {
+    if (!panelMode) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPanelMode(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [panelMode])
+
   const addToDraft = (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim() || !email.trim()) return
+    const key = emailKey(email)
+    if (voters.some((voter) => emailKey(voter.email) === key) || draftVoters.some((row) => emailKey(row.email) === key)) {
+      toast.error('That email is already on the list.')
+      return
+    }
     setDraftVoters((current) => [...current, { name: name.trim(), email: email.trim() }])
     setName('')
     setEmail('')
@@ -113,7 +161,7 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
     }
     setVoters([...voters, ...draftVoters.map((row, index) => makeVoter(row, voters.length + index))])
     setShowList(true)
-    toast.success(`${draftVoters.length} voter${draftVoters.length === 1 ? '' : 's'} added successfully`)
+    toast.success(`${draftVoters.length} voter${draftVoters.length === 1 ? '' : 's'} added. Save the list to keep them.`)
     closePanel()
   }
 
@@ -130,6 +178,11 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    if (file.size > MAX_FILE_BYTES) {
+      toast.error('That file is over 5 MB. Split it into smaller files, or remove extra columns.')
+      event.target.value = ''
+      return
+    }
 
     setSelectedFileName(file.name)
     setSelectedFileSize(`${(file.size / 1024).toFixed(1)}kb`)
@@ -155,9 +208,15 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
       toast.error('Choose a valid CSV or XLSX file before importing.')
       return
     }
-    setVoters([...voters, ...importRows.map((row, index) => makeVoter(row, voters.length + index))])
+    const { accepted, duplicates, invalid } = mergeRows(voters, importRows)
+    if (accepted.length === 0) {
+      toast.error(`No new voters in that file.${skippedNote(duplicates, invalid)}`)
+      return
+    }
+    setVoters([...voters, ...accepted.map((row, index) => makeVoter(row, voters.length + index))])
     setShowList(true)
-    toast.success('Voters list was successfully imported')
+    toast.success(`${accepted.length} voter${accepted.length === 1 ? '' : 's'} imported. Save the list to keep them.${skippedNote(duplicates, invalid)}`)
+    removeFile()
     closePanel()
   }
 
@@ -179,10 +238,16 @@ const Voters: React.FC<VotersProps> = ({ onNext }) => {
         </Card>
       ) : (
         <div className="w-full max-w-[824px]">
-          <div className="relative mb-7 max-w-[600px]"><FiSearch className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search..." className="h-12 rounded-full border-slate-200 bg-white pl-12 text-base" /></div>
-          <div className="hidden overflow-x-auto rounded-t-lg bg-white sm:block"><table className="w-full min-w-[430px] text-left"><thead className="bg-[#e5e7eb] text-sm font-medium text-[#111928]"><tr><th className="rounded-tl-lg px-4 py-3">NAME</th><th className="px-4 py-3">EMAIL</th><th className="rounded-tr-lg px-4 py-3">Actions</th></tr></thead><tbody className="divide-y divide-[#e3e3e3]">{filteredVoters.map((voter) => <tr key={voter.id} className="text-sm text-[#111528]"><td className="px-4 py-3">{voter.name}</td><td className="px-4 py-3">{voter.email}</td><td className="px-4 py-3"><button type="button" onClick={() => removeVoter(voter.id)} className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-rose-600" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></td></tr>)}</tbody></table><p className="border-t border-[#e3e3e3] px-4 py-3 text-sm text-[#111528]">{voters.length} voter{voters.length === 1 ? '' : 's'}</p></div>
-          <div className="space-y-3 sm:hidden">{filteredVoters.map((voter) => <div key={voter.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4"><div><p className="font-medium text-slate-800">{voter.name}</p><p className="mt-1 text-sm text-slate-500">{voter.email}</p></div><button type="button" onClick={() => removeVoter(voter.id)} className="text-rose-500" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></div>)}{filteredVoters.length === 0 && <p className="rounded-lg bg-white p-6 text-center text-sm text-slate-500">No voters match your search.</p>}</div>
-          <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end"><Button variant="ghost" className="h-11 px-5 text-base text-[#111528] hover:bg-white" onClick={() => setShowList(false)}>Go Back</Button><Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={() => save.mutate(undefined, { onSuccess: onNext })} disabled={voters.length === 0 || save.isPending}>{save.isPending ? 'Saving…' : 'Save and continue'}</Button></div>
+          <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1"><FiSearch className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" aria-hidden /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search voters..." aria-label="Search voters" className="h-12 rounded-full border-slate-200 bg-white pl-12 text-base" /></div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="h-11 flex-1 gap-2 border-[#3758f9] text-[#3758f9] hover:bg-[#eef2ff] hover:text-[#3758f9] sm:flex-none" onClick={() => openPanel('import')}><FiUpload className="h-4 w-4" />Import</Button>
+              <Button className="h-11 flex-1 gap-2 bg-[#003dff] text-white hover:bg-[#0034d9] sm:flex-none" onClick={() => openPanel('manual')}><FiPlus className="h-4 w-4" />Add voter</Button>
+            </div>
+          </div>
+          <div className="hidden overflow-x-auto rounded-t-lg bg-white sm:block"><table className="w-full min-w-[430px] text-left"><thead className="bg-[#e5e7eb] text-sm font-medium text-[#111928]"><tr><th className="rounded-tl-lg px-4 py-3">NAME</th><th className="px-4 py-3">EMAIL</th><th className="rounded-tr-lg px-4 py-3">Actions</th></tr></thead><tbody className="divide-y divide-[#e3e3e3]">{filteredVoters.length === 0 && <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-slate-500">No voters match your search.</td></tr>}{filteredVoters.map((voter) => <tr key={voter.id} className="text-sm text-[#111528]"><td className="px-4 py-3">{voter.name}</td><td className="px-4 py-3">{voter.email}</td><td className="px-4 py-3"><button type="button" onClick={() => removeVoter(voter.id)} className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-rose-600" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></td></tr>)}</tbody></table><p className="border-t border-[#e3e3e3] px-4 py-3 text-sm text-[#111528]">{voters.length} voter{voters.length === 1 ? '' : 's'}</p></div>
+          <div className="space-y-3 sm:hidden">{filteredVoters.map((voter) => <div key={voter.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4"><div><p className="font-medium text-slate-800">{voter.name}</p><p className="mt-1 text-sm text-slate-500">{voter.email}</p></div><button type="button" onClick={() => removeVoter(voter.id)} className="text-rose-500" aria-label={`Remove ${voter.name}`}><FiTrash2 className="h-4 w-4" /></button></div>)}{filteredVoters.length === 0 && <p className="rounded-lg bg-white p-6 text-center text-sm text-slate-500">No voters match your search.</p>}<p className="text-sm text-slate-500">{voters.length} voter{voters.length === 1 ? '' : 's'}</p></div>
+          <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end"><Button variant="ghost" className="h-11 px-5 text-base text-[#111528] hover:bg-white" onClick={onBack}>Back</Button><Button className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]" onClick={() => save.mutate(undefined, { onSuccess: onNext })} disabled={voters.length === 0 || save.isPending}>{save.isPending ? 'Saving…' : 'Save and continue'}</Button></div>
         </div>
       )}
 

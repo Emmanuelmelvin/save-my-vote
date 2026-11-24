@@ -47,7 +47,7 @@ const SignUp: React.FC = () => {
   return (
     <AuthLayout
       title="Get Started Now"
-      subtitle="Create your account to take part in the voting process and keep your verification flow in one place."
+      subtitle="Create an organiser account to set up and run your elections. Voters don’t need an account."
       illustration="signup"
       footer={<div className="text-[14px] text-[#18203a]">Already have an account? <Link href="/login" className="font-medium text-[#1050ff]">Login</Link></div>}
     >
@@ -89,7 +89,7 @@ const SignUp: React.FC = () => {
 
           <div className="flex items-start gap-3 pt-1">
             <input id="agree" type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-4 w-4 rounded border-[#d1d5db] text-[#1050ff] focus:ring-[#1050ff]" />
-            <label htmlFor="agree" className="text-[14px] leading-6 text-[#6b7280]">By creating an account you agree to our <a href="/terms" className="font-medium text-[#1050ff]">Terms</a> and <a href="/privacy" className="font-medium text-[#1050ff]">Privacy Policy</a>.</label>
+            <label htmlFor="agree" className="text-[14px] leading-6 text-[#6b7280]">By creating an account you agree to our <a href="/terms" target="_blank" rel="noopener" className="font-medium text-[#1050ff] hover:underline">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-[#1050ff] hover:underline">Privacy Policy</a>.</label>
           </div>
 
           <PrimaryButton type="submit" disabled={!agree || signUp.isPending}>

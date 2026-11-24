@@ -17,7 +17,7 @@ function tracesSampleRate(): number {
 
 /** Requests to our API carry trace headers, so a page load and its API calls form one trace. */
 function apiOrigins(): (string | RegExp)[] {
-  const apiUrl = import.meta.env.VITE_API_URL ?? '/api'
+  const apiUrl = import.meta.env.VITE_API_URL ?? '/api/v1'
   const targets: (string | RegExp)[] = [/^\/api(\/|$)/]
   if (/^https?:\/\//.test(apiUrl)) targets.push(apiUrl.replace(/\/+$/, ''))
   return targets

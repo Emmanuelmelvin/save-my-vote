@@ -10,7 +10,6 @@ import {
   SocialButton,
   TextField,
 } from '@/components/AuthControls'
-import loginSideImage from '@/assets/side.png'
 import { ApiError } from '@/lib/api/client'
 import { useLogin } from '@/lib/api/hooks'
 import { api } from '@/lib/api/services'
@@ -34,9 +33,8 @@ const Login: React.FC = () => {
   return (
     <AuthLayout
       title="Welcome back!"
-      subtitle="Sign in to continue managing your registration and verify your details securely."
+      subtitle="Log in to set up, run and follow your elections."
       illustration="signup"
-      sideImageSrc={loginSideImage}
       footer={<div className="text-[14px] text-[#6b7280]">New here? <Link href="/signup" className="font-medium text-[#1050ff]">Create an account</Link></div>}
     >
       <div className="w-full max-w-[520px]">
@@ -69,17 +67,15 @@ const Login: React.FC = () => {
           }}
         >
           <TextField id="login-email" label="Email" required type="email" placeholder="Enter your Email" value={email} onChange={setEmail} autoComplete="email" />
-          <PasswordField id="login-password" label="Password" required value={password} onChange={setPassword} error={formError} />
+          <PasswordField id="login-password" label="Password" required value={password} onChange={setPassword} error={formError} placeholder="Enter your password" autoComplete="current-password" />
           <div className="flex justify-end">
-            <HelperLink href="/forgot-password" label="Forget password?" align="right" />
+            <HelperLink href="/forgot-password" label="Forgot password?" align="right" />
           </div>
 
           <PrimaryButton type="submit" disabled={login.isPending}>
             {login.isPending ? 'Logging in…' : 'Login'}
           </PrimaryButton>
         </form>
-
-        <div className="mt-6 text-center text-sm text-[#374151]">Don't have an account? <Link href="/signup" className="font-medium text-[#1050ff]">Sign up</Link></div>
       </div>
     </AuthLayout>
   )

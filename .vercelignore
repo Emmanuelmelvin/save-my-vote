@@ -1,0 +1,9 @@
+# CLI deploys upload from the repo root (the Vercel project's Root Directory is frontend/).
+# Only the frontend is deployed; env files hold secrets and dev-only values.
+backend
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist

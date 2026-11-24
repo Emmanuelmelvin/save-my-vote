@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FiCalendar, FiEdit2, FiInfo } from 'react-icons/fi'
+import { FiCalendar, FiClock, FiEdit2 } from 'react-icons/fi'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,6 +18,13 @@ interface LaunchProps {
 }
 
 const tabs = ['Confirm Details', 'Confirm Ballot', 'Terms', 'Launch'] as const
+/** Shorter labels so all four tabs fit on a phone. */
+const shortTabLabels: Record<(typeof tabs)[number], string> = {
+  'Confirm Details': 'Details',
+  'Confirm Ballot': 'Ballot',
+  Terms: 'Terms',
+  Launch: 'Launch',
+}
 
 const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
   const { electionId, title, description, startDate, endDate, positions, voters, reset } = useCreateElectionStore()
@@ -63,18 +70,21 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
         </div>
 
         {/* Navigation tabs */}
-        <div className="mt-4 flex border-b border-slate-200 px-10 max-[560px]:px-6">
+        <div className="mt-4 flex overflow-x-auto border-b border-slate-200 px-10 [scrollbar-width:none] max-[560px]:px-4 [&::-webkit-scrollbar]:hidden" role="tablist">
           {tabs.map((tab) => (
             <button
               key={tab}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
               onClick={() => setActiveTab(tab)}
-              className={`border-b-2 px-4 py-3 text-base font-medium transition-colors ${activeTab === tab
+              className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-base font-medium transition-colors max-[560px]:px-3 max-[560px]:text-sm ${activeTab === tab
                 ? 'border-[#003dff] text-[#003dff]'
                 : 'border-transparent text-[#111528]'
                 }`}
             >
-              {tab}
+              <span className="max-[560px]:hidden">{tab}</span>
+              <span className="hidden max-[560px]:inline">{shortTabLabels[tab]}</span>
             </button>
           ))}
         </div>
@@ -100,9 +110,15 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
 
             {/* Description */}
             <div className="w-full">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between">
                 <p className="text-lg font-medium text-[#202024]">Description</p>
-                <FiInfo className="h-5 w-5 text-[#9CA3AF]" />
+                <Button
+                  variant="ghost"
+                  className="h-7 gap-1 rounded bg-[#E8EDFF] px-3 text-sm text-[#003dff] hover:bg-[#dce4ff]"
+                  onClick={() => onEdit?.('basic')}
+                >
+                  <FiEdit2 className="h-3.5 w-3.5" /> Edit
+                </Button>
               </div>
               <div className="mt-2 flex items-start rounded-lg border border-[#E3E3E3] px-5 py-3">
                 <p className="text-base leading-6 text-[#5A5F73]">{description || 'No description provided'}</p>
@@ -112,10 +128,7 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
             {/* Election date & time */}
             <div className="w-full">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <p className="text-lg font-medium text-[#202024]">Election Date & Time</p>
-                  <FiInfo className="h-5 w-5 text-[#9CA3AF]" />
-                </div>
+                <p className="text-lg font-medium text-[#202024]">Election Date & Time</p>
                 <Button
                   variant="ghost"
                   className="h-7 gap-1 rounded bg-[#E8EDFF] px-3 text-sm text-[#003dff] hover:bg-[#dce4ff]"
@@ -144,18 +157,14 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
                   <p className="text-sm font-medium text-[#111528]">Start Time</p>
                   <div className="mt-1 flex items-center justify-between rounded-lg border border-[#E3E3E3] px-5 py-3">
                     <p className="text-base text-[#111528]">{formatTime(startDate)}</p>
-                    <svg className="h-4 w-4 text-[#9CA3AF]" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
+                    <FiClock className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
                   </div>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#111528]">End Time</p>
                   <div className="mt-1 flex items-center justify-between rounded-lg border border-[#E3E3E3] px-5 py-3">
                     <p className="text-base text-[#111528]">{formatTime(endDate)}</p>
-                    <svg className="h-4 w-4 text-[#9CA3AF]" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
+                    <FiClock className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
                   </div>
                 </div>
               </div>
@@ -235,9 +244,9 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
                 <div className="mt-2 rounded-2xl border border-[#E3E3E3] bg-[#F3F4F6] p-6">
                   <ul className="space-y-3 text-base leading-6 text-[#272935]">
                     <li>- Edit or delete positions or candidates</li>
-                    <li>- Change the election start date & Time</li>
+                    <li>- Change the election start date & time</li>
                   </ul>
-                  <p className="mt-4 text-base leading-6 text-[#272935]">To make these changes, you must cancel and recreate the election</p>
+                  <p className="mt-4 text-base leading-6 text-[#272935]">Check these carefully: to change them later you’d need to create a new election.</p>
                 </div>
               </div>
 
@@ -261,7 +270,12 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
                   onChange={(event) => setAgreed(event.target.checked)}
                   className="h-5 w-5 rounded border-slate-300 text-[#003dff] focus:ring-[#003dff]"
                 />
-                <span className="text-sm text-[#5A5F73]">By continuing, you agree to the Privacy Policy and Terms of Service</span>
+                <span className="text-sm text-[#5A5F73]">
+                  I have authority to run this election, and I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener" className="font-medium text-[#003dff] hover:underline">Terms of Service</a> and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-[#003dff] hover:underline">Privacy Policy</a>, including
+                  having permission to email the voters on my list.
+                </span>
               </label>
             </div>
 
@@ -289,6 +303,13 @@ const Launch: React.FC<LaunchProps> = ({ onEdit, onLaunched }) => {
 
             {!electionId && (
               <p className="w-full rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Save the Basic Info step before launching.</p>
+            )}
+            {electionId && !agreed && (
+              <p className="w-full rounded-lg bg-amber-50 p-4 text-sm text-amber-700">
+                Tick the agreement on the{' '}
+                <button type="button" className="font-medium underline" onClick={() => setActiveTab('Terms')}>Terms</button>{' '}
+                tab to launch.
+              </p>
             )}
 
             {problems.length > 0 && (

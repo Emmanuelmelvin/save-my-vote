@@ -40,23 +40,32 @@ function StepIndicator({ completed, active }: { completed: boolean; active: bool
 const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu, onLaunched }) => {
   const { title } = useCreateElectionStore()
   const [activeStep, setActiveStep] = useState<CreateElectionStepId>('basic')
-  const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => ({
-    basic: false,
-    voters: false,
-    ballot: false,
-    emails: false,
-    branding: false,
-    preview: false,
-    launch: false,
-  }))
-
-  const stepIds = createElectionSteps.map((step) => step.id)
+  // A reopened draft starts with the steps it already has ticked.
+  const [completed, setCompleted] = useState<Record<CreateElectionStepId, boolean>>(() => {
+    const draft = useCreateElectionStore.getState()
+    return {
+      basic: Boolean(draft.electionId),
+      voters: draft.voters.length > 0,
+      ballot: draft.positions.length > 0,
+      emails: false,
+      branding: false,
+      preview: false,
+      launch: false,
+    }
+  })
 
   const handleNext = useCallback(() => {
+    const stepIds = createElectionSteps.map((step) => step.id)
     const currentIndex = stepIds.indexOf(activeStep)
     setCompleted((previous) => ({ ...previous, [activeStep]: true }))
     if (currentIndex < stepIds.length - 1) setActiveStep(stepIds[currentIndex + 1])
-  }, [activeStep, stepIds])
+  }, [activeStep])
+
+  const handleBack = useCallback(() => {
+    const stepIds = createElectionSteps.map((step) => step.id)
+    const currentIndex = stepIds.indexOf(activeStep)
+    if (currentIndex > 0) setActiveStep(stepIds[currentIndex - 1])
+  }, [activeStep])
 
   const activeStepLabel = useMemo(
     () => createElectionSteps.find((step) => step.id === activeStep)?.label ?? 'Basic Info',
@@ -65,19 +74,19 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu, onLaunched 
 
   const stepContent = useMemo<Record<CreateElectionStepId, React.ReactNode>>(() => ({
     basic: <BasicInformation onNext={handleNext} />,
-    voters: <Voters onNext={handleNext} />,
-    ballot: <Ballot onNext={handleNext} />,
-    emails: <Emails onNext={handleNext} />,
-    branding: <Branding onNext={handleNext} />,
-    preview: <Preview onNext={handleNext} />,
+    voters: <Voters onNext={handleNext} onBack={handleBack} />,
+    ballot: <Ballot onNext={handleNext} onBack={handleBack} />,
+    emails: <Emails onNext={handleNext} onBack={handleBack} />,
+    branding: <Branding onNext={handleNext} onBack={handleBack} />,
+    preview: <Preview onNext={handleNext} onBack={handleBack} />,
     launch: <Launch onEdit={(step) => setActiveStep(step)} onLaunched={onLaunched} />,
-  }), [handleNext, onLaunched])
+  }), [handleNext, handleBack, onLaunched])
 
   return (
     <div className="min-h-full bg-[#f8f8f8] text-[#111528]">
       <header className="flex h-[72px] items-center justify-between border-b border-[#e3e3e3] bg-white px-8 max-[760px]:px-5">
-        <p className="font-['Manrope'] text-[16px] font-medium leading-6">{title || 'Senate Elections 2026'}</p>
-        <Button variant="ghost" size="icon" className="hidden max-[760px]:inline-flex" onClick={onOpenMenu} aria-label="Open menu">
+        <p className={`min-w-0 truncate font-['Manrope'] text-[16px] font-medium leading-6 ${title ? '' : 'text-slate-400'}`}>{title || 'Untitled election'}</p>
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={onOpenMenu} aria-label="Open menu">
           <FiMenu size={20} />
         </Button>
       </header>
@@ -86,10 +95,17 @@ const CreateElection: React.FC<CreateElectionProps> = ({ onOpenMenu, onLaunched 
         <aside className="w-[210px] shrink-0 border-r border-[#e3e3e3] px-4 pb-[10px] pt-7 max-[760px]:w-full max-[760px]:border-r-0 max-[760px]:px-5 max-[760px]:pb-0 max-[760px]:pt-5">
           <ul className="flex w-[178px] flex-col gap-2 max-[760px]:hidden">
             {createElectionSteps.map((step) => (
-              <li key={step.id} className={`flex h-11 w-[178px] cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition-colors ${activeStep === step.id ? 'bg-white text-[#003dff]' : 'text-[#111528] hover:bg-white/70'}`} onClick={() => setActiveStep(step.id)}>
-                <StepIndicator completed={completed[step.id]} active={activeStep === step.id} />
-                <step.icon className={`h-5 w-5 shrink-0 ${activeStep === step.id ? 'text-[#003dff]' : 'text-[#111528]'}`} />
-                <span className="whitespace-nowrap font-['Manrope'] text-[16px] font-medium leading-6">{step.label}</span>
+              <li key={step.id}>
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(step.id)}
+                  aria-current={activeStep === step.id ? 'step' : undefined}
+                  className={`flex h-11 w-[178px] items-center gap-2.5 rounded-lg px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#003dff]/40 ${activeStep === step.id ? 'bg-white text-[#003dff]' : 'text-[#111528] hover:bg-white/70'}`}
+                >
+                  <StepIndicator completed={completed[step.id]} active={activeStep === step.id} />
+                  <step.icon className={`h-5 w-5 shrink-0 ${activeStep === step.id ? 'text-[#003dff]' : 'text-[#111528]'}`} aria-hidden />
+                  <span className="whitespace-nowrap font-['Manrope'] text-[16px] font-medium leading-6">{step.label}</span>
+                </button>
               </li>
             ))}
           </ul>

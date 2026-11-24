@@ -151,7 +151,7 @@ export class AuthService {
 
   private async sendVerificationEmail(user: User): Promise<void> {
     const token = await this.tokens.signEmailToken('verify-email', user);
-    const verifyUrl = this.config.backendUrl('/api/auth/verify-email', {
+    const verifyUrl = this.config.backendUrl('/api/v1/auth/verify-email', {
       token,
     });
     await this.mailer.sendVerification(user, verifyUrl);

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'wouter'
 import platformLogo from '@/assets/image.png'
 
 type AuthLayoutProps = {
@@ -45,7 +46,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, children, foot
     <div className="min-h-screen bg-[#fdfdfd] text-[#111528] lg:grid lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
       <section className="flex min-h-screen items-center justify-center px-6 py-8 sm:px-10 lg:px-16 xl:px-20">
         <div className="w-full max-w-[540px] space-y-7">
-          <img src={platformLogo} alt="Save our vote" className="h-11 w-auto max-w-[170px] object-contain" />
+          <Link href="/" className="inline-block" aria-label="SaveMyVote home">
+            <img src={platformLogo} alt="Save our votes" className="h-11 w-auto max-w-[170px] object-contain" />
+          </Link>
 
           <div className="space-y-3">
             <h1 className="text-[31px] font-normal leading-[1.12] tracking-[-0.03em] text-[#18203a]">{title}</h1>
