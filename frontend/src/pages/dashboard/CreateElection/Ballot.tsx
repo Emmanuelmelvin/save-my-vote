@@ -248,6 +248,36 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
     toast.success('Ballot cleared')
   }
 
+  /**
+   * Saves the ballot to the server (closing the panel if it's open) and, when
+   * asked, moves on to the next step: one click from the panel or the page.
+   */
+  const saveBallot = (andContinue: boolean) => {
+    // A position name typed (new, or renamed) but not saved with "Save Position" would be lost.
+    const savedTitle = positions.find((position) => position.id === editingPositionId)?.title ?? ''
+    if (positionTitleEditing && positionTitle.trim() && positionTitle.trim() !== savedTitle) {
+      toast.error(editingPositionId
+        ? 'Click “Save Position” to keep the new name, or undo it, before saving.'
+        : `Click “Save Position” to add "${positionTitle.trim()}", or clear its name, before saving.`)
+      return
+    }
+    if (hasPartialCandidate()) {
+      toast.error('Enter each candidate’s full name before saving.')
+      return
+    }
+    if (positions.length === 0) {
+      toast.error('Add at least one position before saving.')
+      return
+    }
+    const empty = positions.find((position) => position.candidates.length === 0)
+    if (empty) {
+      toast.error(`Add at least one candidate to "${empty.title}".`)
+      return
+    }
+    if (drawerOpen) closeDrawer()
+    save.mutate(undefined, { onSuccess: andContinue ? onNext : undefined })
+  }
+
   const togglePositionExpanded = (positionId: string) => {
     setExpandedPositions((current) => ({ ...current, [positionId]: !current[positionId] }))
   }
@@ -315,14 +345,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
             <Button
               className="h-12 rounded-lg bg-[#003dff] px-6 text-base text-white hover:bg-[#0034d9]"
               disabled={save.isPending}
-              onClick={() => {
-                const empty = positions.find((position) => position.candidates.length === 0)
-                if (empty) {
-                  toast.error(`Add at least one candidate to "${empty.title}".`)
-                  return
-                }
-                save.mutate(undefined, { onSuccess: onNext })
-              }}
+              onClick={() => saveBallot(true)}
             >
               {save.isPending ? 'Saving…' : 'Save and continue'}
             </Button>
@@ -336,7 +359,7 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
           <aside className="flex h-full w-full max-w-[580px] flex-col bg-white shadow-2xl">
             <div className="flex justify-end px-6 pt-6"><button type="button" onClick={closeDrawer} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Close position panel"><FiX className="h-5 w-5" /></button></div>
             <div className="flex-1 overflow-y-auto px-10 pb-28 pt-3 max-[520px]:px-6">
-              <h2 className="text-base font-medium text-[#111528]">Add Position</h2>
+              <h2 className="text-base font-medium text-[#111528]">{activePosition ? 'Edit position' : 'Add position'}</h2>
               <p className="mt-3 text-sm text-[#111528]">Add the offices people will vote for</p>
 
               {positions.length > 0 && <div className="mt-5"><label htmlFor="position-picker" className="block text-sm font-medium text-[#111528]">Position</label><select id="position-picker" value={editingPositionId ?? 'new'} onChange={handlePositionChange} className="mt-2 h-12 w-full rounded-lg border border-[#e3e3e3] bg-white px-3 text-sm text-[#111528] outline-none focus:border-[#003dff] focus:ring-3 focus:ring-[#003dff]/10"><option value="new">Add another position</option>{positions.map((position) => <option key={position.id} value={position.id}>{position.title}</option>)}</select></div>}
@@ -387,7 +410,24 @@ const Ballot: React.FC<BallotProps> = ({ onNext, onBack }) => {
               )}
             </div>
 
-            {activePosition && <div className="sticky bottom-0 border-t border-slate-100 bg-white px-10 py-4 shadow-[0_-8px_20px_-18px_rgba(15,23,42,0.45)] max-[520px]:px-6"><div className="grid gap-3 sm:grid-cols-2"><Button type="button" variant="secondary" className="h-10 gap-2 rounded-lg bg-[#eef2ff] px-3 text-sm text-[#3758f9] hover:bg-[#e3e9ff]" onClick={addCandidateForm}><FiPlus className="h-4 w-4" />Add another candidate</Button><Button type="button" variant="outline" className="h-10 gap-2 rounded-lg border-[#3758f9] px-3 text-sm text-[#003dff] hover:bg-[#eef2ff] hover:text-[#003dff]" onClick={startNewPosition}><FiPlus className="h-4 w-4" />Add another position</Button></div></div>}
+            {/* Finishing is always in reach once the ballot has a position, including while a new one is being named. */}
+            {(activePosition || positions.length > 0) && (
+              <div className="sticky bottom-0 space-y-3 border-t border-slate-100 bg-white px-10 py-4 shadow-[0_-8px_20px_-18px_rgba(15,23,42,0.45)] max-[520px]:px-6">
+                {activePosition && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button type="button" variant="secondary" className="h-10 gap-2 rounded-lg bg-[#eef2ff] px-3 text-sm text-[#3758f9] hover:bg-[#e3e9ff]" onClick={addCandidateForm}><FiPlus className="h-4 w-4" />Add another candidate</Button>
+                    <Button type="button" variant="outline" className="h-10 gap-2 rounded-lg border-[#3758f9] px-3 text-sm text-[#003dff] hover:bg-[#eef2ff] hover:text-[#003dff]" onClick={startNewPosition}><FiPlus className="h-4 w-4" />Add another position</Button>
+                  </div>
+                )}
+                <div className={`flex items-center justify-end gap-3 ${activePosition ? 'border-t border-slate-100 pt-3' : ''}`}>
+                  {!activePosition && <p className="mr-auto text-xs text-slate-500">{positions.length} position{positions.length === 1 ? '' : 's'} on the ballot</p>}
+                  <Button type="button" variant="ghost" className="h-10 px-4 text-sm text-[#111528]" disabled={save.isPending} onClick={() => saveBallot(false)}>Save</Button>
+                  <Button type="button" className="h-10 rounded-lg bg-[#003dff] px-5 text-sm text-white hover:bg-[#0034d9]" disabled={save.isPending} onClick={() => saveBallot(true)}>
+                    {save.isPending ? 'Saving…' : 'Save and continue'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       )}

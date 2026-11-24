@@ -106,6 +106,7 @@ const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
   const [importRows, setImportRows] = useState<ImportRow[]>([])
   const [search, setSearch] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [fileInputKey, setFileInputKey] = useState(0)
 
   // Makes the server's voter roll match this list, then keeps the saved ids.
   const save = useSaveStep(async (draft) => {
@@ -154,15 +155,36 @@ const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
     setEmail('')
   }
 
-  const saveManualVoters = () => {
-    if (draftVoters.length === 0) {
-      toast.error('Add at least one voter before saving.')
-      return
-    }
-    setVoters([...voters, ...draftVoters.map((row, index) => makeVoter(row, voters.length + index))])
+  /**
+   * Adds rows to the list and saves it to the server straight away, then
+   * optionally moves on to the next step. One click, nothing left unsaved.
+   */
+  const commitRows = (rows: ImportRow[], andContinue: boolean, note = '') => {
+    setVoters([...voters, ...rows.map((row, index) => makeVoter(row, voters.length + index))])
     setShowList(true)
-    toast.success(`${draftVoters.length} voter${draftVoters.length === 1 ? '' : 's'} added. Save the list to keep them.`)
     closePanel()
+    if (note) toast.info(note.trim())
+    save.mutate(undefined, { onSuccess: andContinue ? onNext : undefined })
+  }
+
+  // Voters typed in the panel, including one filled in but not yet added with "Add to list".
+  const pendingManualRows = (): ImportRow[] | null => {
+    const typed = name.trim() || email.trim() ? [{ name: name.trim(), email: email.trim() }] : []
+    if (typed.length && (!typed[0].name || !EMAIL.test(emailKey(typed[0].email)))) {
+      toast.error('Finish the name and a valid email, or clear them, before saving.')
+      return null
+    }
+    const { accepted, duplicates } = mergeRows(voters, [...draftVoters, ...typed])
+    if (accepted.length === 0) {
+      toast.error(duplicates ? 'Those voters are already on the list.' : 'Add at least one voter before saving.')
+      return null
+    }
+    return accepted
+  }
+
+  const saveManualVoters = (andContinue: boolean) => {
+    const rows = pendingManualRows()
+    if (rows) commitRows(rows, andContinue)
   }
 
   const downloadSample = () => {
@@ -203,7 +225,15 @@ const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const saveImportedVoters = () => {
+  // Forgets the chosen file; remounting the input (new key) clears its value without touching the ref.
+  const clearSelectedFile = () => {
+    setSelectedFileName('')
+    setSelectedFileSize('')
+    setImportRows([])
+    setFileInputKey((key) => key + 1)
+  }
+
+  const saveImportedVoters = (andContinue: boolean) => {
     if (importRows.length === 0) {
       toast.error('Choose a valid CSV or XLSX file before importing.')
       return
@@ -213,12 +243,21 @@ const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
       toast.error(`No new voters in that file.${skippedNote(duplicates, invalid)}`)
       return
     }
-    setVoters([...voters, ...accepted.map((row, index) => makeVoter(row, voters.length + index))])
-    setShowList(true)
-    toast.success(`${accepted.length} voter${accepted.length === 1 ? '' : 's'} imported. Save the list to keep them.${skippedNote(duplicates, invalid)}`)
-    removeFile()
-    closePanel()
+    clearSelectedFile()
+    commitRows(accepted, andContinue, skippedNote(duplicates, invalid))
   }
+
+  const panelActions = (onSave: (andContinue: boolean) => void, saveLabel: string, disabled = false) => (
+    <div className="mt-auto flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+      <Button type="button" variant="ghost" className="h-10" onClick={closePanel}>Cancel</Button>
+      <Button type="button" variant="outline" className="h-10 border-[#3758f9] text-[#3758f9] hover:bg-[#eef2ff] hover:text-[#3758f9]" disabled={disabled || save.isPending} onClick={() => onSave(false)}>
+        {saveLabel}
+      </Button>
+      <Button type="button" className="h-10 bg-[#003dff] px-5 text-white hover:bg-[#0034d9]" disabled={disabled || save.isPending} onClick={() => onSave(true)}>
+        {save.isPending ? 'Saving…' : 'Save and continue'}
+      </Button>
+    </div>
+  )
 
   const removeVoter = (id: string) => setVoters(voters.filter((voter) => voter.id !== id))
 
@@ -259,13 +298,13 @@ const Voters: React.FC<VotersProps> = ({ onNext, onBack }) => {
 
             {panelMode === 'manual' ? (
               <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6">
-                <p className="text-sm leading-6 text-slate-500">Add as many voters as you need, then save the list when you are ready.</p>
+                <p className="text-sm leading-6 text-slate-500">Add as many voters as you need. Saving keeps them on the list; “Save and continue” also moves on to the ballot.</p>
                 <form onSubmit={addToDraft} className="mt-6 space-y-4"><div><label htmlFor="voter-name" className="text-sm font-medium text-slate-700">Full name</label><Input id="voter-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="John Doe" className="mt-2 h-11 border-slate-200" autoFocus required /></div><div><label htmlFor="voter-email" className="text-sm font-medium text-slate-700">Email address</label><Input id="voter-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="john@example.com" className="mt-2 h-11 border-slate-200" required /></div><Button type="submit" variant="outline" className="h-10 w-full border-[#3758f9] text-[#3758f9] hover:bg-[#eef2ff] hover:text-[#3758f9]"><FiPlus className="h-4 w-4" />Add to list</Button></form>
                 {draftVoters.length > 0 && <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-sm font-semibold text-slate-700">Ready to add ({draftVoters.length})</p><div className="mt-3 space-y-2">{draftVoters.map((voter, index) => <div key={`${voter.email}-${index}`} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5"><div className="min-w-0"><p className="truncate text-sm font-medium text-slate-800">{voter.name}</p><p className="truncate text-xs text-slate-500">{voter.email}</p></div><button type="button" onClick={() => setDraftVoters((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="p-1 text-slate-400 hover:text-rose-600" aria-label={`Remove ${voter.name}`}><FiX className="h-4 w-4" /></button></div>)}</div></div>}
-                <div className="mt-auto flex justify-end gap-3 border-t border-slate-100 pt-5"><Button type="button" variant="outline" className="h-10 border-slate-200" onClick={closePanel}>Cancel</Button><Button type="button" className="h-10 bg-[#003dff] px-5 text-white hover:bg-[#0034d9]" onClick={saveManualVoters}>Save {draftVoters.length || ''} voter{draftVoters.length === 1 ? '' : 's'}</Button></div>
+                {panelActions(saveManualVoters, 'Save')}
               </div>
             ) : (
-              <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6"><p className="text-sm leading-6 text-slate-500">Upload a CSV or XLSX file with <strong>name</strong> and <strong>email</strong> columns.</p><button type="button" onClick={downloadSample} className="mt-4 self-start text-sm font-medium text-[#003dff] hover:underline">Download the sample CSV</button><img src={spreadsheetAsset} alt="Voter spreadsheet template" className="mt-4 h-20 w-full rounded-lg border border-slate-200 object-cover object-top" /><input ref={fileInputRef} type="file" accept=".csv,.xlsx" onChange={handleFileChange} className="hidden" />{selectedFileName ? <div className="relative mt-5 rounded-lg bg-slate-100 px-4 py-3"><p className="pr-20 text-sm font-medium text-slate-700">{selectedFileName}</p><p className="mt-1 text-xs text-slate-500">{selectedFileSize}{importRows.length > 0 ? ` · ${importRows.length} voter${importRows.length === 1 ? '' : 's'} found` : ''}</p><button type="button" onClick={removeFile} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-600" aria-label="Remove selected file"><FiTrash2 className="h-4 w-4" /></button></div> : <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-5 flex w-full flex-col items-center rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center hover:border-[#003dff] hover:bg-[#f7f8ff]"><FiFileText className="h-6 w-6 text-[#003dff]" /><span className="mt-2 text-sm font-medium text-slate-700">Choose CSV or XLSX file</span><span className="mt-1 text-xs text-slate-400">Maximum file size: 5 MB</span></button>}<div className="mt-auto flex justify-end gap-3 border-t border-slate-100 pt-5"><Button type="button" variant="outline" className="h-10 border-slate-200" onClick={closePanel}>Cancel</Button><Button type="button" className="h-10 bg-[#003dff] px-5 text-white hover:bg-[#0034d9]" onClick={saveImportedVoters} disabled={importRows.length === 0}>Import voters</Button></div></div>
+              <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6"><p className="text-sm leading-6 text-slate-500">Upload a CSV or XLSX file with <strong>name</strong> and <strong>email</strong> columns.</p><button type="button" onClick={downloadSample} className="mt-4 self-start text-sm font-medium text-[#003dff] hover:underline">Download the sample CSV</button><img src={spreadsheetAsset} alt="Voter spreadsheet template" className="mt-4 h-20 w-full rounded-lg border border-slate-200 object-cover object-top" /><input key={fileInputKey} ref={fileInputRef} type="file" accept=".csv,.xlsx" onChange={handleFileChange} className="hidden" />{selectedFileName ? <div className="relative mt-5 rounded-lg bg-slate-100 px-4 py-3"><p className="pr-20 text-sm font-medium text-slate-700">{selectedFileName}</p><p className="mt-1 text-xs text-slate-500">{selectedFileSize}{importRows.length > 0 ? ` · ${importRows.length} voter${importRows.length === 1 ? '' : 's'} found` : ''}</p><button type="button" onClick={removeFile} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-600" aria-label="Remove selected file"><FiTrash2 className="h-4 w-4" /></button></div> : <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-5 flex w-full flex-col items-center rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center hover:border-[#003dff] hover:bg-[#f7f8ff]"><FiFileText className="h-6 w-6 text-[#003dff]" /><span className="mt-2 text-sm font-medium text-slate-700">Choose CSV or XLSX file</span><span className="mt-1 text-xs text-slate-400">Maximum file size: 5 MB</span></button>}{panelActions(saveImportedVoters, 'Import', importRows.length === 0)}</div>
             )}
           </aside>
         </div>
