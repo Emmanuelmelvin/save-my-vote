@@ -33,6 +33,11 @@ export class AuthApi {
     return this.http.get<{ user: UserProfile }>('/auth/me')
   }
 
+  /** Signed UserJot identity for the feedback widget; null when the API has no UserJot secret. */
+  userJotToken() {
+    return this.http.get<{ token: string | null }>('/auth/userjot-token')
+  }
+
   signUp(input: {
     fullName: string
     email: string

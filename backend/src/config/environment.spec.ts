@@ -42,6 +42,22 @@ describe('validateEnvironment', () => {
     ).toThrow(/OTP_SECRET/);
   });
 
+  it('needs both UserJot settings or neither', () => {
+    expect(() =>
+      validateEnvironment({
+        ...secrets,
+        USERJOT_PROJECT_ID: 'project',
+        USERJOT_PROJECT_SECRET: 'secret',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateEnvironment({ ...secrets, USERJOT_PROJECT_ID: 'project' }),
+    ).toThrow(/USERJOT_PROJECT_SECRET/);
+    expect(() =>
+      validateEnvironment({ ...secrets, USERJOT_PROJECT_SECRET: 'secret' }),
+    ).toThrow(/USERJOT_PROJECT_ID/);
+  });
+
   describe('R2 image storage', () => {
     const r2 = {
       R2_ACCOUNT_ID: 'a'.repeat(32),

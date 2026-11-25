@@ -43,7 +43,8 @@ export default defineConfig(({ mode }) => {
       // In development the API is reached through Vite, so the auth cookie is first-party.
       proxy: {
         '/api': {
-          target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000',
+          // From the shell or .env (loadEnv reads both).
+          target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
           changeOrigin: false,
         },
       },

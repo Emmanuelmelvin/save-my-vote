@@ -32,6 +32,7 @@ import {
   SignUpDto,
 } from './dto/auth.dto.js';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard.js';
+import { TokenService } from './token.service.js';
 
 const GENERIC_EMAIL_SENT =
   'If an account matches that email address, we have sent it a message.';
@@ -44,6 +45,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly cookie: AuthCookie,
     private readonly config: AppConfig,
+    private readonly tokens: TokenService,
   ) {}
 
   @Public()
@@ -125,6 +127,18 @@ export class AuthController {
   @ApiCookieAuth()
   me(@CurrentUser() user: User): { user: UserProfile } {
     return { user: user.toProfile() };
+  }
+
+  @Get('userjot-token')
+  @ApiCookieAuth()
+  @ApiOperation({
+    summary:
+      'A signed UserJot identity token for the feedback widget (null when UserJot is not configured)',
+  })
+  async userJotToken(
+    @CurrentUser() user: User,
+  ): Promise<{ token: string | null }> {
+    return { token: (await this.tokens.signUserJotToken(user)) ?? null };
   }
 
   @Public()
